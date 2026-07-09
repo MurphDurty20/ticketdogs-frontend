@@ -323,12 +323,7 @@
     results.innerHTML = "";
 
     try {
-      const res = await fetch(`${API_URL}?keyword=${encodeURIComponent(keyword)}`);
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || `Server responded with ${res.status}`);
-      }
+      const data = await fetchEvents(keyword);
 
       if (!data.events || data.events.length === 0) {
         status.textContent = `No events found for "${keyword}". Try a different search.`;
@@ -341,23 +336,7 @@
       countLine.textContent = `${data.count} result${data.count === 1 ? '' : 's'} for "${data.keyword}"`;
       results.appendChild(countLine);
 
-      data.events.forEach(ev => {
-        const card = document.createElement('a');
-        card.className = 'event-card';
-        card.href = ev.url || '#';
-        card.target = '_blank';
-        card.rel = 'noopener noreferrer';
-
-        card.innerHTML = `
-          <p class="event-name">${escapeHtml(ev.name)}</p>
-          <div class="event-meta">
-            ${escapeHtml(ev.date)} · ${escapeHtml(ev.venue)}${ev.city ? ', ' + escapeHtml(ev.city) : ''}
-            <span class="source-tag">${escapeHtml(ev.source || 'Source')}</span>
-          </div>
-          <div class="event-price">${formatPrice(ev.price, ev.source)}</div>
-        `;
-        results.appendChild(card);
-      });
+      data.events.forEach(ev => results.appendChild(buildEventCard(ev)));
 
     } catch (err) {
       status.className = "status error";
@@ -367,6 +346,33 @@
       button.disabled = false;
       button.textContent = "Search";
     }
+  }
+
+  async function fetchEvents(keyword) {
+    const res = await fetch(`${API_URL}?keyword=${encodeURIComponent(keyword)}`);
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || `Server responded with ${res.status}`);
+    }
+    return data;
+  }
+
+  function buildEventCard(ev) {
+    const card = document.createElement('a');
+    card.className = 'event-card';
+    card.href = ev.url || '#';
+    card.target = '_blank';
+    card.rel = 'noopener noreferrer';
+
+    card.innerHTML = `
+      <p class="event-name">${escapeHtml(ev.name)}</p>
+      <div class="event-meta">
+        ${escapeHtml(ev.date)} · ${escapeHtml(ev.venue)}${ev.city ? ', ' + escapeHtml(ev.city) : ''}
+        <span class="source-tag">${escapeHtml(ev.source || 'Source')}</span>
+      </div>
+      <div class="event-price">${formatPrice(ev.price, ev.source)}</div>
+    `;
+    return card;
   }
 
   function formatPrice(price, source) {
@@ -403,11 +409,64 @@
   }
 
   function loadDefaultSearch() {
-    // Show real results the moment someone lands on the page, instead of
-    // an empty search box. Picks a random popular search each visit.
-    const pick = POPULAR_SEARCHES[Math.floor(Math.random() * POPULAR_SEARCHES.length)];
-    input.value = pick;
-    runSearch();
+    loadTrending();
+  }
+
+  async function loadTrending() {
+    status.className = "status";
+    status.textContent = "Fetching trending shows…";
+    results.innerHTML = "";
+
+    // Pull from a handful of different artists in parallel, taking just
+    // 1–2 dates from each, so the homepage shows real variety instead of
+    // ten dates from a single tour.
+    const picks = shuffle([...POPULAR_SEARCHES]).slice(0, 4);
+
+    const settled = await Promise.allSettled(
+      picks.map(term => fetchEvents(term))
+    );
+
+    let combined = [];
+    settled.forEach(result => {
+      if (result.status === 'fulfilled' && result.value.events) {
+        const realOnly = result.value.events.filter(ev => !looksLikeTribute(ev.name));
+        combined = combined.concat(realOnly.slice(0, 2));
+      }
+    });
+
+    if (combined.length === 0) {
+      status.textContent = "Couldn't load trending shows right now. Try a search above.";
+      return;
+    }
+
+    combined = shuffle(combined);
+
+    status.textContent = "";
+    const heading = document.createElement('p');
+    heading.className = 'result-count';
+    heading.textContent = 'Trending right now';
+    results.appendChild(heading);
+
+    combined.forEach(ev => results.appendChild(buildEventCard(ev)));
+  }
+
+  function looksLikeTribute(name) {
+    if (!name) return false;
+    const flags = [
+      'tribute', 'a salute to', 'the music of', 'cover band',
+      'ultimate ', 'experience -', ' experience:', 'reimagined'
+    ];
+    const lower = name.toLowerCase();
+    return flags.some(flag => lower.includes(flag));
+  }
+
+  function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
   }
 
   renderSuggestions();
