@@ -44,6 +44,7 @@
     color: var(--ink);
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
   }
 
   .perf {
@@ -221,8 +222,12 @@
 
   @media (max-width: 480px) {
     .search-card { flex-direction: column; }
+    #keyword { font-size: 16px; } /* prevents iOS auto-zoom on focus */
+    button#searchBtn { width: 100%; min-height: 48px; }
     .event-card { grid-template-columns: 1fr; }
     .event-price { grid-column: 1; grid-row: auto; text-align: left; margin-top: 6px; }
+    header { padding: 36px 20px 26px; }
+    .brand-logo { height: 56px; }
   }
 </style>
 </head>
