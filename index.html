@@ -119,6 +119,37 @@
   button#searchBtn:hover { background: #a86813; }
   button#searchBtn:disabled { background: var(--muted); cursor: default; }
 
+  .suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin: 16px 2px 0;
+  }
+
+  .suggestions .label {
+    color: var(--muted);
+    font-size: 0.85rem;
+    align-self: center;
+    margin-right: 2px;
+  }
+
+  .chip {
+    background: var(--card);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    border-radius: 999px;
+    padding: 7px 16px;
+    font-size: 0.88rem;
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+
+  .chip:hover {
+    border-color: var(--amber-deep);
+    color: var(--amber-deep);
+  }
+
   .status {
     text-align: center;
     color: var(--muted);
@@ -245,6 +276,8 @@
     <button id="searchBtn">Search</button>
   </div>
 
+  <div id="suggestions" class="suggestions"></div>
+
   <div id="status" class="status"></div>
   <div id="results"></div>
 </main>
@@ -257,6 +290,19 @@
   const API_URL = "https://ticketdogs-api.azurewebsites.net/api/searchevents";
 
   const input = document.getElementById('keyword');
+  const suggestionsEl = document.getElementById('suggestions');
+
+  // A small curated list of reliably popular searches, used both as
+  // clickable suggestion chips and to auto-populate the homepage on load
+  // so first-time visitors see real results instead of a blank search box.
+  const POPULAR_SEARCHES = [
+    "Taylor Swift",
+    "Morgan Wallen",
+    "Coldplay",
+    "NFL",
+    "Bad Bunny",
+    "Ed Sheeran"
+  ];
   const button = document.getElementById('searchBtn');
   const status = document.getElementById('status');
   const results = document.getElementById('results');
@@ -340,6 +386,32 @@
 
   button.addEventListener('click', runSearch);
   input.addEventListener('keydown', e => { if (e.key === 'Enter') runSearch(); });
+
+  function renderSuggestions() {
+    suggestionsEl.innerHTML = '<span class="label">Try:</span>';
+    POPULAR_SEARCHES.forEach(term => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'chip';
+      chip.textContent = term;
+      chip.addEventListener('click', () => {
+        input.value = term;
+        runSearch();
+      });
+      suggestionsEl.appendChild(chip);
+    });
+  }
+
+  function loadDefaultSearch() {
+    // Show real results the moment someone lands on the page, instead of
+    // an empty search box. Picks a random popular search each visit.
+    const pick = POPULAR_SEARCHES[Math.floor(Math.random() * POPULAR_SEARCHES.length)];
+    input.value = pick;
+    runSearch();
+  }
+
+  renderSuggestions();
+  loadDefaultSearch();
 </script>
 
 </body>
