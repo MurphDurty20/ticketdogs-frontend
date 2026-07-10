@@ -393,6 +393,7 @@
   padding: 3px 6px;
   background: var(--card);
   color: var(--ink);
+  }
 
   .follow-btn {
   background: none;
@@ -785,6 +786,34 @@ async function loadCityShows(city) {
       return;
     }
 
+    const wasFav = localFavoriteIds.has(eventId);
+
+    try {
+      if (wasFav) {
+        await fetch(`${AUTH_API}/removefavorite`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Session-Token': token },
+          body: JSON.stringify({ id: eventId })
+        });
+        localFavoriteIds.delete(eventId);
+        btnEl.textContent = '☆';
+        btnEl.style.color = '#999';
+      } else {
+        await fetch(`${AUTH_API}/addfavorite`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Session-Token': token },
+          body: JSON.stringify(ev)
+        });
+        localFavoriteIds.add(eventId);
+        btnEl.textContent = '★';
+        btnEl.style.color = '#dca95e';
+      }
+      localStorage.setItem('favIds', JSON.stringify([...localFavoriteIds]));
+    } catch (err) {
+      console.error('Failed to update favorite', err);
+    }
+  }
+
   let followedArtistNames = new Set();
 
 async function loadFollowedArtists() {
@@ -809,6 +838,7 @@ function updateFollowButtonState(btnEl, artistName) {
   btnEl.textContent = isFollowing ? '✓ Following' : 'Follow ' + artistName;
   btnEl.classList.toggle('following', isFollowing);
 }
+  
 
 async function toggleFollowArtist(artistName, btnEl) {
   const token = getSessionToken();
@@ -840,34 +870,6 @@ async function toggleFollowArtist(artistName, btnEl) {
     console.error('Failed to update follow status', err);
   }
 }
-
-    const wasFav = localFavoriteIds.has(eventId);
-
-    try {
-      if (wasFav) {
-        await fetch(`${AUTH_API}/removefavorite`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Session-Token': token },
-          body: JSON.stringify({ id: eventId })
-        });
-        localFavoriteIds.delete(eventId);
-        btnEl.textContent = '☆';
-        btnEl.style.color = '#999';
-      } else {
-        await fetch(`${AUTH_API}/addfavorite`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Session-Token': token },
-          body: JSON.stringify(ev)
-        });
-        localFavoriteIds.add(eventId);
-        btnEl.textContent = '★';
-        btnEl.style.color = '#dca95e';
-      }
-      localStorage.setItem('favIds', JSON.stringify([...localFavoriteIds]));
-    } catch (err) {
-      console.error('Failed to update favorite', err);
-    }
-  }
 
   function updateAuthUI() {
     const email = getUserEmail();
