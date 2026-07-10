@@ -428,14 +428,18 @@
 
 <div id="loginModal">
   <div class="modal-box">
-    <h3 style="margin-top:0;">Sign in</h3>
-    <p style="color:var(--muted); font-size:0.9rem;">We'll email you a one-time login link. No password needed.</p>
+    <h3 id="authModalTitle" style="margin-top:0;">Log in</h3>
     <input type="email" id="loginEmail" placeholder="you@example.com">
+    <input type="password" id="loginPassword" placeholder="Password" style="width:100%; padding:10px; border:2px solid var(--line); border-radius:8px; font-family:inherit; margin-bottom:12px; box-sizing:border-box;">
     <div id="loginStatus"></div>
     <div style="display:flex; gap:10px; margin-top:10px;">
-      <button id="sendLoginBtn">Send login link</button>
+      <button id="sendLoginBtn">Log in</button>
       <button id="closeLoginBtn">Cancel</button>
     </div>
+    <p style="text-align:center; font-size:0.85rem; margin-top:14px;">
+      <span id="authToggleText">Don't have an account?</span>
+      <a href="#" id="authToggleLink" style="color:var(--amber-deep);">Sign up</a>
+    </p>
   </div>
 </div>
 
@@ -921,33 +925,63 @@ async function loadUserProfile() {
   }
 };
 
-  document.getElementById('loginBtn').addEventListener('click', openLoginModal);
-  document.getElementById('closeLoginBtn').addEventListener('click', closeLoginModal);
+  let authMode = 'login'; // or 'signup'
 
-  document.getElementById('sendLoginBtn').addEventListener('click', async () => {
-    const email = document.getElementById('loginEmail').value.trim();
-    const statusEl = document.getElementById('loginStatus');
+document.getElementById('loginBtn').addEventListener('click', openLoginModal);
+document.getElementById('closeLoginBtn').addEventListener('click', closeLoginModal);
 
-    if (!email || !email.includes('@')) {
-      statusEl.textContent = 'Please enter a valid email address.';
-      return;
+document.getElementById('authToggleLink').addEventListener('click', (e) => {
+  e.preventDefault();
+  authMode = authMode === 'login' ? 'signup' : 'login';
+  document.getElementById('authModalTitle').textContent = authMode === 'login' ? 'Log in' : 'Sign up';
+  document.getElementById('sendLoginBtn').textContent = authMode === 'login' ? 'Log in' : 'Sign up';
+  document.getElementById('authToggleText').textContent = authMode === 'login' ? "Don't have an account?" : 'Already have an account?';
+  document.getElementById('authToggleLink').textContent = authMode === 'login' ? 'Sign up' : 'Log in';
+  document.getElementById('loginStatus').textContent = '';
+});
+
+document.getElementById('sendLoginBtn').addEventListener('click', async () => {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const statusEl = document.getElementById('loginStatus');
+
+  if (!email || !email.includes('@')) {
+    statusEl.textContent = 'Please enter a valid email address.';
+    return;
+  }
+  if (!password) {
+    statusEl.textContent = 'Please enter a password.';
+    return;
+  }
+
+  statusEl.textContent = authMode === 'login' ? 'Logging in...' : 'Creating account...';
+
+  const endpoint = authMode === 'login' ? 'login' : 'signup';
+
+  try {
+    const res = await fetch(`${AUTH_API}/${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Something went wrong.');
+
+    if (authMode === 'login') {
+      localStorage.setItem('sessionToken', data.sessionToken);
+      localStorage.setItem('userEmail', data.email);
+      closeLoginModal();
+      updateAuthUI();
+      await loadUserProfile();
+      await loadFollowedArtists();
+      loadDefaultSearch();
+    } else {
+      statusEl.textContent = data.message; // "Check your email to confirm..."
     }
-
-    statusEl.textContent = 'Sending...';
-
-    try {
-      const res = await fetch(`${AUTH_API}/requestlogin`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Something went wrong.');
-      statusEl.textContent = 'Check your email for a login link!';
-    } catch (err) {
-      statusEl.textContent = err.message;
-    }
-  });
+  } catch (err) {
+    statusEl.textContent = err.message;
+  }
+});
 
   document.getElementById('logoutBtn').addEventListener('click', () => {
   localStorage.removeItem('sessionToken');

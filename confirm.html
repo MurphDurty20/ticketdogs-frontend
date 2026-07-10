@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Confirming your email... - TicketDogs</title>
+<style>
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background:#f6f3ec; color:#0f2031; display:flex; align-items:center; justify-content:center; height:100vh; margin:0; text-align:center; padding: 0 20px; }
+  a { color:#b98c48; }
+</style>
+</head>
+<body>
+  <div>
+    <p id="message">Confirming your email...</p>
+  </div>
+  <script>
+    const API_URL = "https://ticketdogs-api.azurewebsites.net/api";
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    const email = params.get('email');
+    const messageEl = document.getElementById('message');
+
+    async function confirm() {
+      if (!token || !email) {
+        messageEl.textContent = 'Missing confirmation information. Please check the link in your email.';
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_URL}/confirmemail?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}`);
+        const data = await res.json();
+
+        if (!res.ok) {
+          messageEl.textContent = data.error || 'This confirmation link is invalid or expired.';
+          return;
+        }
+
+        messageEl.innerHTML = 'Your email is confirmed! <a href="/">Go log in</a>';
+      } catch (err) {
+        messageEl.textContent = 'Something went wrong. Please try again.';
+      }
+    }
+
+    confirm();
+  </script>
+</body>
+</html>
