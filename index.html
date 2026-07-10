@@ -393,6 +393,23 @@
   padding: 3px 6px;
   background: var(--card);
   color: var(--ink);
+
+  .follow-btn {
+  background: none;
+  border: 1px solid var(--amber-deep);
+  color: var(--amber-deep);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.follow-btn.following {
+  background: var(--amber-deep);
+  color: var(--paper);
+}
 }
 
 </style>
@@ -413,7 +430,7 @@
   </span>
   <span id="authLoggedIn" style="display:none;">
     Signed in as <span id="userEmail"></span> ·
-    <a href="/profile.html">My Favorites</a> ·
+    <a href="/account.html">My Account</a> ·
     City: <select id="citySelect"><option value="">Choose your city</option></select> ·
     <button id="logoutBtn">Sign out</button>
   </span>
@@ -494,12 +511,26 @@
       }
 
       status.textContent = "";
-      const countLine = document.createElement('p');
-      countLine.className = 'result-count';
-      countLine.textContent = `${data.count} result${data.count === 1 ? '' : 's'} for "${data.keyword}"`;
-      results.appendChild(countLine);
 
-      data.events.forEach(ev => results.appendChild(buildEventCard(ev)));
+        const headerRow = document.createElement('div');
+        headerRow.style.cssText = 'grid-column: 1 / -1; display:flex; justify-content:space-between; align-items:center; margin: 0 2px 4px;';
+
+        const countLine = document.createElement('p');
+        countLine.className = 'result-count';
+        countLine.style.margin = '0';
+        countLine.textContent = `${data.count} result${data.count === 1 ? '' : 's'} for "${data.keyword}"`;
+
+        const followBtn = document.createElement('button');
+        followBtn.className = 'follow-btn';
+        followBtn.textContent = 'Follow ' + keyword;
+        followBtn.addEventListener('click', () => toggleFollowArtist(keyword, followBtn));
+        updateFollowButtonState(followBtn, keyword);
+
+        headerRow.appendChild(countLine);
+        headerRow.appendChild(followBtn);
+        results.appendChild(headerRow);
+
+        data.events.forEach(ev => results.appendChild(buildEventCard(ev)));
 
     } catch (err) {
       status.className = "status error";
@@ -754,6 +785,62 @@ async function loadCityShows(city) {
       return;
     }
 
+  let followedArtistNames = new Set();
+
+async function loadFollowedArtists() {
+  const token = getSessionToken();
+  if (!token) return;
+
+  try {
+    const res = await fetch(`${AUTH_API}/getfollowedartists`, {
+      headers: { 'X-Session-Token': token }
+    });
+    const data = await res.json();
+    if (res.ok && data.artists) {
+      followedArtistNames = new Set(data.artists.map(a => a.toLowerCase()));
+    }
+  } catch (err) {
+    console.error('Failed to load followed artists', err);
+  }
+}
+
+function updateFollowButtonState(btnEl, artistName) {
+  const isFollowing = followedArtistNames.has(artistName.toLowerCase());
+  btnEl.textContent = isFollowing ? '✓ Following' : 'Follow ' + artistName;
+  btnEl.classList.toggle('following', isFollowing);
+}
+
+async function toggleFollowArtist(artistName, btnEl) {
+  const token = getSessionToken();
+  if (!token) {
+    openLoginModal();
+    return;
+  }
+
+  const isFollowing = followedArtistNames.has(artistName.toLowerCase());
+
+  try {
+    if (isFollowing) {
+      await fetch(`${AUTH_API}/unfollowartist`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Session-Token': token },
+        body: JSON.stringify({ artist: artistName })
+      });
+      followedArtistNames.delete(artistName.toLowerCase());
+    } else {
+      await fetch(`${AUTH_API}/followartist`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Session-Token': token },
+        body: JSON.stringify({ artist: artistName })
+      });
+      followedArtistNames.add(artistName.toLowerCase());
+    }
+    updateFollowButtonState(btnEl, artistName);
+  } catch (err) {
+    console.error('Failed to update follow status', err);
+  }
+}
+
     const wasFav = localFavoriteIds.has(eventId);
 
     try {
@@ -902,6 +989,7 @@ async function init() {
   renderSuggestions();
   await loadCityOptions();
   await loadUserProfile();
+  await loadFollowedArtists();
   loadDefaultSearch();
 }
 

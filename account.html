@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>My Account - TicketDogs</title>
+<style>
+  :root {
+    --ink: #0f2031; --paper: #f6f3ec; --amber-deep: #b98c48;
+    --line: #d8d2c2; --muted: #6b6558; --card: #ffffff;
+  }
+  body { margin:0; background:var(--paper); color:var(--ink); font-family:'Segoe UI', system-ui, sans-serif; }
+  header { padding: 30px 20px; text-align:center; }
+  a.back { color: var(--amber-deep); text-decoration:none; font-size:0.9rem; }
+  main { max-width: 980px; margin: 0 auto 80px; padding: 0 20px; }
+
+  h2 { font-size: 1.3rem; margin: 40px 0 12px; }
+  h2:first-of-type { margin-top: 20px; }
+
+  #grid, #artistShowsGrid { display:grid; grid-template-columns: repeat(3, 1fr); gap:20px; margin-top: 10px; }
+  .event-card { background:var(--card); border:1px solid var(--line); border-radius:14px; overflow:hidden; text-decoration:none; color:inherit; display:flex; flex-direction:column; position:relative; }
+  .event-thumb { width:100%; aspect-ratio:1/1; background-size:cover; background-position:center; background-color:var(--line); }
+  .event-content { padding:12px; flex:1; }
+  .event-name { font-weight:600; margin:0 0 6px; }
+  .event-meta { color:var(--muted); font-size:0.85rem; }
+  .event-price { padding: 0 12px 12px; font-weight:600; }
+  .remove-btn { position:absolute; top:8px; right:8px; background:rgba(255,255,255,0.9); border:none; border-radius:50%; width:34px; height:34px; cursor:pointer; font-size:1.1rem; }
+  .empty { text-align:center; color:var(--muted); margin-top: 20px; }
+
+  .artist-chip-row { display:flex; flex-wrap:wrap; gap:10px; margin-top: 10px; }
+  .artist-chip { background:var(--card); border:1px solid var(--line); border-radius:999px; padding:8px 16px; font-size:0.9rem; display:flex; align-items:center; gap:8px; }
+  .artist-chip button { background:none; border:none; color:var(--muted); cursor:pointer; font-size:1rem; line-height:1; padding:0; }
+
+  .city-tag {
+    display:inline-block;
+    background: var(--amber-deep);
+    color: var(--paper);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 999px;
+    margin-bottom: 6px;
+  }
+</style>
+</head>
+<body>
+<header>
+  <a href="/" class="back">← Back to search</a>
+  <h1>My Account</h1>
+</header>
+<main>
+  <h2>Followed Artists &amp; Teams</h2>
+  <div id="artistChips" class="artist-chip-row"></div>
+  <p id="artistsEmpty" class="empty" style="display:none;">You're not following anyone yet. Search for an artist or team and hit "Follow" to see their shows here.</p>
+
+  <h2>Upcoming Shows from Artists You Follow</h2>
+  <div id="artistShowsGrid"></div>
+  <p id="artistShowsEmpty" class="empty" style="display:none;"></p>
+
+  <h2>My Favorites</h2>
+  <div id="grid"></div>
+  <p id="empty" class="empty" style="display:none;">No favorites yet. Star an event from the homepage to save it here.</p>
+</main>
+<script>
+  const API_URL = "https://ticketdogs-api.azurewebsites.net/api";
+  const token = localStorage.getItem('sessionToken');
+
+  if (!token) {
+    window.location.href = '/';
+  } else {
+    loadFollowedArtists();
+    loadArtistShows();
+    loadFavorites();
+  }
+
+  async function loadFollowedArtists() {
+    const chipsEl = document.getElementById('artistChips');
+    const emptyEl = document.getElementById('artistsEmpty');
+
+    try {
+      const res = await fetch(`${API_URL}/getfollowedartists`, {
+        headers: { 'X-Session-Token': token }
+      });
+      const data = await res.json();
+
+      if (!data.artists || data.artists.length === 0) {
+        emptyEl.style.display = 'block';
+        return;
+      }
+
+      data.artists.forEach(artist => {
+        const chip = document.createElement('div');
+        chip.className = 'artist-chip';
+        chip.innerHTML = `<span>${escapeHtml(artist)}</span>`;
+
+        const removeBtn = document.createElement('button');
+        removeBtn.textContent = '✕';
+        removeBtn.title = `Unfollow ${artist}`;
+        removeBtn.addEventListener('click', async () => {
+          await fetch(`${API_URL}/unfollowartist`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Session-Token': token },
+            body: JSON.stringify({ artist })
+          });
+          chip.remove();
+          if (chipsEl.children.length === 0) emptyEl.style.display = 'block';
+          loadArtistShows(); // refresh shows list since the artist list changed
+        });
+
+        chip.appendChild(removeBtn);
+        chipsEl.appendChild(chip);
+      });
+    } catch (err) {
+      console.error('Failed to load followed artists', err);
+    }
+  }
+
+  async function loadArtistShows() {
+    const showsGrid = document.getElementById('artistShowsGrid');
+    const emptyEl = document.getElementById('artistShowsEmpty');
+    showsGrid.innerHTML = '';
+    emptyEl.style.display = 'none';
+
+    try {
+      const res = await fetch(`${API_URL}/getfollowedartistshows`, {
+        headers: { 'X-Session-Token': token }
+      });
+      const data = await res.json();
+
+      if (!data.shows || data.shows.length === 0) {
+        emptyEl.textContent = data.artists && data.artists.length > 0
+          ? "No upcoming shows found for the artists you follow right now."
+          : "Follow an artist or team above to see their upcoming shows here.";
+        emptyEl.style.display = 'block';
+        return;
+      }
+
+      data.shows.forEach(ev => showsGrid.appendChild(buildEventCard(ev)));
+    } catch (err) {
+      emptyEl.textContent = "Couldn't load shows right now.";
+      emptyEl.style.display = 'block';
+      console.error(err);
+    }
+  }
+
+  async function loadFavorites() {
+    const grid = document.getElementById('grid');
+    const emptyMsg = document.getElementById('empty');
+
+    try {
+      const res = await fetch(`${API_URL}/getfavorites`, {
+        headers: { 'X-Session-Token': token }
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        window.location.href = '/';
+        return;
+      }
+
+      if (!data.favorites || data.favorites.length === 0) {
+        emptyMsg.style.display = 'block';
+        return;
+      }
+
+      data.favorites.forEach(fav => grid.appendChild(buildFavoriteCard(fav)));
+    } catch (err) {
+      emptyMsg.textContent = 'Something went wrong loading your favorites.';
+      emptyMsg.style.display = 'block';
+    }
+  }
+
+  function buildEventCard(ev) {
+    const card = document.createElement('a');
+    card.href = ev.url || '#';
+    card.target = '_blank';
+    card.rel = 'noopener noreferrer';
+    card.className = 'event-card';
+    card.style.textDecoration = 'none';
+    card.style.color = 'inherit';
+
+    const thumbStyle = ev.image ? `background-image: url('${escapeHtml(ev.image)}');` : '';
+
+    card.innerHTML = `
+      <div class="event-thumb" style="${thumbStyle}"></div>
+      <div class="event-content">
+        <p class="event-name">${escapeHtml(ev.name)}</p>
+        <div class="event-meta">${escapeHtml(ev.date)}<br>${escapeHtml(ev.venue)}${ev.city ? ', ' + escapeHtml(ev.city) : ''}</div>
+      </div>
+      <div class="event-price">${escapeHtml(ev.price || '')}</div>
+    `;
+    return card;
+  }
+
+  function buildFavoriteCard(fav) {
+    const card = document.createElement('div');
+    card.className = 'event-card';
+
+    const thumbStyle = fav.image ? `background-image: url('${escapeHtml(fav.image)}');` : '';
+
+    card.innerHTML = `
+      <a href="${fav.url || '#'}" target="_blank" rel="noopener noreferrer" style="text-decoration:none; color:inherit;">
+        <div class="event-thumb" style="${thumbStyle}"></div>
+        <div class="event-content">
+          <p class="event-name">${escapeHtml(fav.name)}</p>
+          <div class="event-meta">${escapeHtml(fav.date)}<br>${escapeHtml(fav.venue)}${fav.city ? ', ' + escapeHtml(fav.city) : ''}</div>
+        </div>
+        <div class="event-price">${escapeHtml(fav.price || '')}</div>
+      </a>
+    `;
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'remove-btn';
+    removeBtn.textContent = '✕';
+    removeBtn.addEventListener('click', async () => {
+      await fetch(`${API_URL}/removefavorite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Session-Token': token },
+        body: JSON.stringify({ id: fav.id })
+      });
+      card.remove();
+      const grid = document.getElementById('grid');
+      if (grid.children.length === 0) document.getElementById('empty').style.display = 'block';
+    });
+
+    card.appendChild(removeBtn);
+    return card;
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>"']/g, m => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[m]));
+  }
+</script>
+</body>
+</html>
