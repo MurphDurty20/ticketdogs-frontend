@@ -385,17 +385,7 @@
     .brand-logo { height: 56px; }
   }
 
-  #citySelect {
-  font-family: inherit;
-  font-size: 0.9rem;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 3px 6px;
-  background: var(--card);
-  color: var(--ink);
-  }
-
-  .follow-btn {
+    .follow-btn {
   background: none;
   border: 1px solid var(--amber-deep);
   color: var(--amber-deep);
@@ -430,11 +420,10 @@
     <button id="loginBtn">Sign in to save favorites</button>
   </span>
   <span id="authLoggedIn" style="display:none;">
-    Signed in as <span id="userEmail"></span> ·
-    <a href="/account.html">My Account</a> ·
-    City: <select id="citySelect"><option value="">Choose your city</option></select> ·
-    <button id="logoutBtn">Sign out</button>
-  </span>
+  Signed in as <span id="userEmail"></span> ·
+  <a href="/account.html">My Account</a> ·
+  <button id="logoutBtn">Sign out</button>
+</span>
 </div>
 
 <div id="loginModal">
@@ -915,21 +904,6 @@ async function toggleFollowArtist(artistName, btnEl) {
   const citySelect = document.getElementById('citySelect');
 let currentUserCity = null;
 
-async function loadCityOptions() {
-  try {
-    const res = await fetch(`${AUTH_API}/getcities`);
-    const data = await res.json();
-    data.cities.forEach(city => {
-      const opt = document.createElement('option');
-      opt.value = city;
-      opt.textContent = city;
-      citySelect.appendChild(opt);
-    });
-  } catch (err) {
-    console.error('Failed to load city list', err);
-  }
-}
-
 async function loadUserProfile() {
   const token = getSessionToken();
   if (!token) return;
@@ -941,30 +915,11 @@ async function loadUserProfile() {
     const data = await res.json();
     if (res.ok && data.homeCity) {
       currentUserCity = data.homeCity;
-      citySelect.value = data.homeCity;
     }
   } catch (err) {
     console.error('Failed to load profile', err);
   }
-}
-
-citySelect.addEventListener('change', async () => {
-  const city = citySelect.value;
-  const token = getSessionToken();
-  if (!city || !token) return;
-
-  try {
-    await fetch(`${AUTH_API}/setcity`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Session-Token': token },
-      body: JSON.stringify({ city })
-    });
-    currentUserCity = city;
-    loadDefaultSearch(); // reload homepage feed with new city
-  } catch (err) {
-    console.error('Failed to save city', err);
-  }
-});
+};
 
   document.getElementById('loginBtn').addEventListener('click', openLoginModal);
   document.getElementById('closeLoginBtn').addEventListener('click', closeLoginModal);
@@ -995,18 +950,16 @@ citySelect.addEventListener('change', async () => {
   });
 
   document.getElementById('logoutBtn').addEventListener('click', () => {
-    localStorage.removeItem('sessionToken');
-    localStorage.removeItem('userEmail');
-    currentUserCity = null;
-    citySelect.value = '';
-    updateAuthUI();
-    loadDefaultSearch();
+  localStorage.removeItem('sessionToken');
+  localStorage.removeItem('userEmail');
+  currentUserCity = null;
+  updateAuthUI();
+  loadDefaultSearch();
 });
 
 async function init() {
   updateAuthUI();
   renderSuggestions();
-  await loadCityOptions();
   await loadUserProfile();
   await loadFollowedArtists();
   loadDefaultSearch();

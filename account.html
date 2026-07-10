@@ -41,7 +41,17 @@
     padding: 3px 8px;
     border-radius: 999px;
     margin-bottom: 6px;
+  
   }
+  #citySelect {
+  font-family: inherit;
+  font-size: 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 3px 6px;
+  background: var(--card);
+  color: var(--ink);
+}
 </style>
 </head>
 <body>
@@ -50,6 +60,9 @@
   <h1>My Account</h1>
 </header>
 <main>
+  <div style="text-align:center; margin: 10px 0 30px;">
+  Home city: <select id="citySelect"><option value="">Choose your city</option></select>
+  </div>
   <h2>Followed Artists &amp; Teams</h2>
   <div id="artistChips" class="artist-chip-row"></div>
   <p id="artistsEmpty" class="empty" style="display:none;">You're not following anyone yet. Search for an artist or team and hit "Follow" to see their shows here.</p>
@@ -67,12 +80,54 @@
   const token = localStorage.getItem('sessionToken');
 
   if (!token) {
-    window.location.href = '/';
-  } else {
-    loadFollowedArtists();
-    loadArtistShows();
-    loadFavorites();
+  window.location.href = '/';
+} else {
+  loadFollowedArtists();
+  loadArtistShows();
+  loadFavorites();
+  loadCityOptions();
+}
+
+async function loadCityOptions() {
+  const citySelect = document.getElementById('citySelect');
+
+  try {
+    const res = await fetch(`${API_URL}/getcities`);
+    const data = await res.json();
+    data.cities.forEach(city => {
+      const opt = document.createElement('option');
+      opt.value = city;
+      opt.textContent = city;
+      citySelect.appendChild(opt);
+    });
+
+    const profileRes = await fetch(`${API_URL}/getprofile`, {
+      headers: { 'X-Session-Token': token }
+    });
+    const profileData = await profileRes.json();
+    if (profileRes.ok && profileData.homeCity) {
+      citySelect.value = profileData.homeCity;
+    }
+  } catch (err) {
+    console.error('Failed to load city options', err);
   }
+
+  citySelect.addEventListener('change', async () => {
+    const city = citySelect.value;
+    if (!city) return;
+
+    try {
+      await fetch(`${API_URL}/setcity`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Session-Token': token },
+        body: JSON.stringify({ city })
+      });
+      loadArtistShows(); // refresh shows list so city-priority sorting updates
+    } catch (err) {
+      console.error('Failed to save city', err);
+    }
+  });
+}
 
   async function loadFollowedArtists() {
     const chipsEl = document.getElementById('artistChips');
