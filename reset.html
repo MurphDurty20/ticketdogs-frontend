@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Reset your password - TicketDogs</title>
+<style>
+  :root {
+    --ink: #0f2031; --paper: #f6f3ec; --amber-deep: #b98c48;
+    --line: #d8d2c2; --muted: #6b6558; --card: #ffffff;
+  }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background:var(--paper); color:var(--ink); display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0; padding: 20px; }
+  .box { background:var(--card); border-radius:14px; padding:32px; max-width:380px; width:100%; box-shadow: 0 12px 30px -12px rgba(20,23,31,0.35); }
+  h2 { margin-top: 0; }
+  input { width:100%; padding:10px; border:2px solid var(--line); border-radius:8px; font-family:inherit; margin-bottom:12px; box-sizing:border-box; font-size: 1rem; }
+  button { width:100%; background:var(--amber-deep); color:var(--paper); border:none; border-radius:8px; padding:12px; cursor:pointer; font-weight:600; font-family:inherit; font-size: 1rem; }
+  #status { font-size:0.9rem; color:var(--muted); min-height:20px; margin-bottom: 10px; }
+  a { color: var(--amber-deep); }
+</style>
+</head>
+<body>
+  <div class="box">
+    <h2>Reset your password</h2>
+    <div id="formArea">
+      <input type="password" id="newPassword" placeholder="New password (min 8 characters)">
+      <input type="password" id="confirmPassword" placeholder="Confirm new password">
+      <div id="status"></div>
+      <button id="resetBtn">Reset password</button>
+    </div>
+  </div>
+  <script>
+    const API_URL = "https://ticketdogs-api.azurewebsites.net/api";
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    const email = params.get('email');
+    const statusEl = document.getElementById('status');
+
+    if (!token || !email) {
+      document.getElementById('formArea').innerHTML = '<p>Missing reset information. Please use the link from your email.</p>';
+    }
+
+    document.getElementById('resetBtn').addEventListener('click', async () => {
+      const newPassword = document.getElementById('newPassword').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+
+      if (!newPassword || newPassword.length < 8) {
+        statusEl.textContent = 'Password must be at least 8 characters.';
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        statusEl.textContent = 'Passwords do not match.';
+        return;
+      }
+
+      statusEl.textContent = 'Resetting...';
+
+      try {
+        const res = await fetch(`${API_URL}/resetpassword`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, email, newPassword })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          statusEl.textContent = data.error || 'Something went wrong.';
+          return;
+        }
+
+        document.getElementById('formArea').innerHTML = '<p>Password reset! <a href="/">Go log in</a></p>';
+      } catch (err) {
+        statusEl.textContent = 'Something went wrong. Please try again.';
+      }
+    });
+  </script>
+</body>
+</html>
