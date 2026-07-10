@@ -943,6 +943,31 @@ document.getElementById('authToggleLink').addEventListener('click', (e) => {
   document.getElementById('loginStatus').textContent = '';
 });
 
+document.getElementById('forgotPasswordLink').addEventListener('click', async (e) => {
+  e.preventDefault();
+  const email = document.getElementById('loginEmail').value.trim();
+  const statusEl = document.getElementById('loginStatus');
+
+  if (!email || !email.includes('@')) {
+    statusEl.textContent = 'Enter your email above first, then click "Forgot password?"';
+    return;
+  }
+
+  statusEl.textContent = 'Sending reset link...';
+
+  try {
+    const res = await fetch(`${AUTH_API}/forgotpassword`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    const data = await res.json();
+    statusEl.textContent = data.message || 'If an account exists for that email, a reset link has been sent.';
+  } catch (err) {
+    statusEl.textContent = 'Something went wrong. Please try again.';
+  }
+});
+
 document.getElementById('sendLoginBtn').addEventListener('click', async () => {
   const email = document.getElementById('loginEmail').value.trim();
   const password = document.getElementById('loginPassword').value;
