@@ -856,8 +856,11 @@ citySelect.addEventListener('change', async () => {
   document.getElementById('logoutBtn').addEventListener('click', () => {
     localStorage.removeItem('sessionToken');
     localStorage.removeItem('userEmail');
+    currentUserCity = null;
+    citySelect.value = '';
     updateAuthUI();
-  });
+    loadDefaultSearch();
+});
 
 async function init() {
   updateAuthUI();
