@@ -384,6 +384,17 @@
     header { padding: 36px 20px 26px; }
     .brand-logo { height: 56px; }
   }
+
+  #citySelect {
+  font-family: inherit;
+  font-size: 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 3px 6px;
+  background: var(--card);
+  color: var(--ink);
+}
+
 </style>
 </head>
 <body>
@@ -401,6 +412,7 @@
   <span id="authLoggedIn" style="display:none;">
     Signed in as <span id="userEmail"></span> ·
     <a href="/profile.html">My Favorites</a> ·
+    City: <select id="citySelect"><option value="">Choose your city</option></select> ·
     <button id="logoutBtn">Sign out</button>
   </span>
 </div>
@@ -590,22 +602,42 @@
   }
 
   function loadDefaultSearch() {
+  if (getSessionToken() && currentUserCity) {
+    loadCityShows(currentUserCity);
+  } else {
     loadTrending();
   }
+}
 
-  async function loadTrending() {
-    status.className = "status";
-    status.textContent = "Fetching trending shows…";
-    results.innerHTML = "";
+async function loadCityShows(city) {
+  status.className = "status";
+  status.textContent = `Fetching shows in ${city}…`;
+  results.innerHTML = "";
 
-    // Pull from a handful of different artists in parallel, taking just
-    // 1–2 dates from each, so the homepage shows real variety instead of
-    // ten dates from a single tour.
+  try {
+    const res = await fetch(`${AUTH_API}/searcheventsbycity?city=${encodeURIComponent(city)}`);
+    const data = await res.json();
+
+    status.textContent = "";
+
+    const cityHeading = document.createElement('p');
+    cityHeading.className = 'result-count';
+    cityHeading.textContent = `Upcoming shows in ${city}`;
+    results.appendChild(cityHeading);
+
+    if (data.events && data.events.length > 0) {
+      const realOnly = data.events.filter(ev => !looksLikeTribute(ev.name));
+      realOnly.forEach(ev => results.appendChild(buildEventCard(ev)));
+    } else {
+      const noneMsg = document.createElement('p');
+      noneMsg.className = 'status';
+      noneMsg.textContent = `No upcoming shows found in ${city} right now.`;
+      results.appendChild(noneMsg);
+    }
+
+    // Append general trending below the city-specific results
     const picks = shuffle([...POPULAR_SEARCHES]).slice(0, 4);
-
-    const settled = await Promise.allSettled(
-      picks.map(term => fetchEvents(term))
-    );
+    const settled = await Promise.allSettled(picks.map(term => fetchEvents(term)));
 
     let combined = [];
     settled.forEach(result => {
@@ -615,21 +647,22 @@
       }
     });
 
-    if (combined.length === 0) {
-      status.textContent = "Couldn't load trending shows right now. Try a search above.";
-      return;
+    if (combined.length > 0) {
+      combined = shuffle(combined);
+      const trendingHeading = document.createElement('p');
+      trendingHeading.className = 'result-count';
+      trendingHeading.style.marginTop = '20px';
+      trendingHeading.textContent = 'Trending right now';
+      results.appendChild(trendingHeading);
+      combined.forEach(ev => results.appendChild(buildEventCard(ev)));
     }
 
-    combined = shuffle(combined);
-
-    status.textContent = "";
-    const heading = document.createElement('p');
-    heading.className = 'result-count';
-    heading.textContent = 'Trending right now';
-    results.appendChild(heading);
-
-    combined.forEach(ev => results.appendChild(buildEventCard(ev)));
+  } catch (err) {
+    status.className = "status error";
+    status.textContent = "Couldn't load shows for your city right now. Try a search above.";
+    console.error(err);
   }
+}
 
   function looksLikeTribute(name) {
     if (!name) return false;
@@ -736,6 +769,60 @@
     document.getElementById('loginEmail').value = '';
   }
 
+  const citySelect = document.getElementById('citySelect');
+let currentUserCity = null;
+
+async function loadCityOptions() {
+  try {
+    const res = await fetch(`${AUTH_API}/getcities`);
+    const data = await res.json();
+    data.cities.forEach(city => {
+      const opt = document.createElement('option');
+      opt.value = city;
+      opt.textContent = city;
+      citySelect.appendChild(opt);
+    });
+  } catch (err) {
+    console.error('Failed to load city list', err);
+  }
+}
+
+async function loadUserProfile() {
+  const token = getSessionToken();
+  if (!token) return;
+
+  try {
+    const res = await fetch(`${AUTH_API}/getprofile`, {
+      headers: { 'X-Session-Token': token }
+    });
+    const data = await res.json();
+    if (res.ok && data.homeCity) {
+      currentUserCity = data.homeCity;
+      citySelect.value = data.homeCity;
+    }
+  } catch (err) {
+    console.error('Failed to load profile', err);
+  }
+}
+
+citySelect.addEventListener('change', async () => {
+  const city = citySelect.value;
+  const token = getSessionToken();
+  if (!city || !token) return;
+
+  try {
+    await fetch(`${AUTH_API}/setcity`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Session-Token': token },
+      body: JSON.stringify({ city })
+    });
+    currentUserCity = city;
+    loadDefaultSearch(); // reload homepage feed with new city
+  } catch (err) {
+    console.error('Failed to save city', err);
+  }
+});
+
   document.getElementById('loginBtn').addEventListener('click', openLoginModal);
   document.getElementById('closeLoginBtn').addEventListener('click', closeLoginModal);
 
@@ -770,9 +857,15 @@
     updateAuthUI();
   });
 
+async function init() {
   updateAuthUI();
   renderSuggestions();
+  await loadCityOptions();
+  await loadUserProfile();
   loadDefaultSearch();
+}
+
+init();
 </script>
 
 </body>
