@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Signing you in... - TicketDogs</title>
+<style>
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background:#f6f3ec; color:#0f2031; display:flex; align-items:center; justify-content:center; height:100vh; margin:0; text-align:center; }
+</style>
+</head>
+<body>
+  <div>
+    <p id="message">Signing you in...</p>
+  </div>
+  <script>
+    const API_URL = "https://ticketdogs-api.azurewebsites.net/api";
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    const email = params.get('email');
+    const messageEl = document.getElementById('message');
+
+    async function verify() {
+      if (!token || !email) {
+        messageEl.textContent = 'Missing login information. Please request a new link.';
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_URL}/verifylogin?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}`);
+        const data = await res.json();
+
+        if (!res.ok) {
+          messageEl.textContent = data.error || 'This login link is invalid or expired.';
+          return;
+        }
+
+        localStorage.setItem('sessionToken', data.sessionToken);
+        localStorage.setItem('userEmail', data.email);
+        messageEl.textContent = 'Signed in! Redirecting...';
+        setTimeout(() => { window.location.href = '/'; }, 1000);
+      } catch (err) {
+        messageEl.textContent = 'Something went wrong. Please try again.';
+      }
+    }
+
+    verify();
+  </script>
+</body>
+</html>
