@@ -507,8 +507,24 @@
       const data = await fetchEvents(keyword);
 
       if (!data.events || data.events.length === 0) {
-        status.textContent = `No events found for "${keyword}". Try a different search.`;
+        status.textContent = "";
+
+        const emptyMsg = document.createElement('p');
+        emptyMsg.className = 'status';
+        emptyMsg.textContent = `No upcoming events found for "${keyword}" right now.`;
+
+        const followBtn = document.createElement('button');
+        followBtn.className = 'follow-btn';
+        followBtn.style.display = 'block';
+        followBtn.style.margin = '10px auto 0';
+        followBtn.textContent = 'Follow ' + keyword;
+        followBtn.addEventListener('click', () => toggleFollowArtist(keyword, followBtn));
+        updateFollowButtonState(followBtn, keyword);
+
+        results.appendChild(emptyMsg);
+        results.appendChild(followBtn);
         return;
+}
       }
 
       status.textContent = "";
