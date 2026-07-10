@@ -511,12 +511,14 @@
 
         const emptyMsg = document.createElement('p');
         emptyMsg.className = 'status';
+        emptyMsg.style.gridColumn = '1 / -1';
         emptyMsg.textContent = `No upcoming events found for "${keyword}" right now.`;
 
         const followBtn = document.createElement('button');
         followBtn.className = 'follow-btn';
         followBtn.style.display = 'block';
         followBtn.style.margin = '10px auto 0';
+        followBtn.style.gridColumn = '1 / -1';
         followBtn.textContent = 'Follow ' + keyword;
         followBtn.addEventListener('click', () => toggleFollowArtist(keyword, followBtn));
         updateFollowButtonState(followBtn, keyword);
