@@ -685,6 +685,41 @@ async function loadCityShows(city) {
     return a;
   }
 
+  async function loadTrending() {
+  status.className = "status";
+  status.textContent = "Fetching trending shows…";
+  results.innerHTML = "";
+
+  const picks = shuffle([...POPULAR_SEARCHES]).slice(0, 4);
+
+  const settled = await Promise.allSettled(
+    picks.map(term => fetchEvents(term))
+  );
+
+  let combined = [];
+  settled.forEach(result => {
+    if (result.status === 'fulfilled' && result.value.events) {
+      const realOnly = result.value.events.filter(ev => !looksLikeTribute(ev.name));
+      combined = combined.concat(realOnly.slice(0, 2));
+    }
+  });
+
+  if (combined.length === 0) {
+    status.textContent = "Couldn't load trending shows right now. Try a search above.";
+    return;
+  }
+
+  combined = shuffle(combined);
+
+  status.textContent = "";
+  const heading = document.createElement('p');
+  heading.className = 'result-count';
+  heading.textContent = 'Trending right now';
+  results.appendChild(heading);
+
+  combined.forEach(ev => results.appendChild(buildEventCard(ev)));
+}
+
   // --- Auth / favorites ---
   let localFavoriteIds = new Set(JSON.parse(localStorage.getItem('favIds') || '[]'));
 
