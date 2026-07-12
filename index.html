@@ -1414,6 +1414,7 @@ async function loadFollowedArtists() {
 }
 
 function updateFollowButtonState(btnEl, artistName) {
+  if (!artistName) return;
   const isFollowing = followedArtistNames.has(artistName.toLowerCase());
   btnEl.textContent = isFollowing ? '✓ Following' : 'Follow ' + artistName;
   btnEl.classList.toggle('following', isFollowing);
@@ -1421,6 +1422,7 @@ function updateFollowButtonState(btnEl, artistName) {
   
 
 async function toggleFollowArtist(artistName, btnEl) {
+  if (!artistName) return;
   const token = getSessionToken();
   if (!token) {
     openLoginModal();
