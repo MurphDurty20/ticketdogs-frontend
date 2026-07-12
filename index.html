@@ -564,8 +564,8 @@
   <input type="date" id="dateTo" style="font-family:inherit; font-size:0.85rem; border:1px solid var(--line); border-radius:6px; padding:4px 6px; background:var(--card); color:var(--ink);">
   <button id="clearDatesBtn" type="button" style="background:none; border:none; color:var(--muted); cursor:pointer; font-size:0.8rem; text-decoration:underline; font-family:inherit; display:none;">Clear</button>
 </div>
+<div id="categoryRow" style="display:none; align-items:center; justify-content:center; flex-wrap:wrap; gap:8px; margin-top:10px;"></div>
 
-  <div id="suggestions" class="suggestions"></div>
 <div style="text-align:center; margin-top:8px;">
   <button id="useLocationBtn" style="background:none; border:none; color:var(--muted); cursor:pointer; font-size:0.85rem; text-decoration:underline; font-family:inherit;">📍 Use my location</button>
 </div>
@@ -583,7 +583,6 @@
   const AUTH_API = "https://ticketdogs-api.azurewebsites.net/api";
 
   const input = document.getElementById('keyword');
-  const suggestionsEl = document.getElementById('suggestions');
 
   // A small curated list of reliably popular searches, used both as
   // clickable suggestion chips and to auto-populate the homepage on load
@@ -616,12 +615,44 @@
   const dateFromInput = document.getElementById('dateFrom');
   const dateToInput = document.getElementById('dateTo');
   const clearDatesBtn = document.getElementById('clearDatesBtn');
+  const categoryRow = document.getElementById('categoryRow');
+
+  // Ticketmaster's top-level "segment" classifications. "All" is our own
+  // addition to mean "no filter".
+  const CATEGORIES = ["All", "Music", "Sports", "Arts & Theatre", "Family", "Film"];
+  let currentCategory = "All";
+
+  function renderCategoryChips() {
+    categoryRow.innerHTML = '';
+    CATEGORIES.forEach(cat => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'chip';
+      chip.textContent = cat;
+      chip.dataset.category = cat;
+      if (cat === currentCategory) {
+        chip.style.background = 'var(--amber-deep)';
+        chip.style.color = 'var(--paper)';
+        chip.style.borderColor = 'var(--amber-deep)';
+      }
+      chip.addEventListener('click', () => {
+        currentCategory = cat;
+        renderCategoryChips();
+        citySearchDisplayCount = 10;
+        renderCityResults();
+      });
+      categoryRow.appendChild(chip);
+    });
+  }
+
+  renderCategoryChips();
 
   // The date range picker only makes sense for city searches, so show it
   // once the typed text matches a known city and hide it otherwise.
   function updateDateRangeVisibility() {
     const isCity = MAJOR_CITIES.some(c => c.toLowerCase() === input.value.trim().toLowerCase());
     dateRangeRow.style.display = isCity ? 'flex' : 'none';
+    categoryRow.style.display = isCity ? 'flex' : 'none';
   }
 
   input.addEventListener('input', updateDateRangeVisibility);
@@ -718,6 +749,8 @@
         if (data.isCitySearch) {
           currentCityResults = data.events;
           citySearchDisplayCount = 10;
+          currentCategory = "All";
+          renderCategoryChips();
 
           const listEl = document.createElement('div');
           listEl.id = 'cityResultsList';
@@ -901,21 +934,6 @@ input.addEventListener('keydown', e => { if (e.key === 'Enter') suggestDropdown.
 
   button.addEventListener('click', runSearch);
   input.addEventListener('keydown', e => { if (e.key === 'Enter') runSearch(); });
-
-  function renderSuggestions() {
-    suggestionsEl.innerHTML = '<span class="label">Try:</span>';
-    POPULAR_SEARCHES.forEach(term => {
-      const chip = document.createElement('button');
-      chip.type = 'button';
-      chip.className = 'chip';
-      chip.textContent = term;
-      chip.addEventListener('click', () => {
-        input.value = term;
-        runSearch();
-      });
-      suggestionsEl.appendChild(chip);
-    });
-  }
 
   function loadDefaultSearch() {
   if (getSessionToken() && currentUserCity) {
@@ -1132,17 +1150,30 @@ function renderCityResults() {
   const listEl = document.getElementById('cityResultsList');
   if (!listEl) return;
 
+  const filtered = currentCategory === "All"
+    ? currentCityResults
+    : currentCityResults.filter(ev => ev.category === currentCategory);
+
   listEl.innerHTML = '';
-  const toShow = currentCityResults.slice(0, citySearchDisplayCount);
+  const toShow = filtered.slice(0, citySearchDisplayCount);
   toShow.forEach(ev => listEl.appendChild(buildRowCard(ev)));
 
   const existingBtn = document.getElementById('loadMoreBtn');
   if (existingBtn) existingBtn.remove();
 
-  if (citySearchDisplayCount < currentCityResults.length) {
+  if (filtered.length === 0) {
+    const emptyMsg = document.createElement('p');
+    emptyMsg.className = 'status';
+    emptyMsg.style.textAlign = 'center';
+    emptyMsg.textContent = `No ${currentCategory.toLowerCase()} events found in this range.`;
+    listEl.appendChild(emptyMsg);
+    return;
+  }
+
+  if (citySearchDisplayCount < filtered.length) {
     const loadMoreBtn = document.createElement('button');
     loadMoreBtn.id = 'loadMoreBtn';
-    loadMoreBtn.textContent = `Load more (${currentCityResults.length - citySearchDisplayCount} remaining)`;
+    loadMoreBtn.textContent = `Load more (${filtered.length - citySearchDisplayCount} remaining)`;
     loadMoreBtn.addEventListener('click', () => {
       citySearchDisplayCount += 10;
       renderCityResults();
@@ -1391,7 +1422,6 @@ document.getElementById('sendLoginBtn').addEventListener('click', async () => {
 
 async function init() {
   updateAuthUI();
-  renderSuggestions();
   await loadUserProfile();
   await loadFollowedArtists();
   loadDefaultSearch();
