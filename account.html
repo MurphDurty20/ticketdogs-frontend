@@ -88,6 +88,14 @@
   loadCityOptions();
 }
 
+function formatPrice(price, source) {
+  if (!price || price === 'Price not listed') {
+    const label = source ? `See on ${escapeHtml(source)}` : 'See price';
+    return `<span class="price-cta">${label} →</span>`;
+  }
+  return escapeHtml(price);
+}
+
 async function loadCityOptions() {
   const citySelect = document.getElementById('citySelect');
 
@@ -243,7 +251,7 @@ async function loadCityOptions() {
         <p class="event-name">${escapeHtml(ev.name)}</p>
         <div class="event-meta">${escapeHtml(ev.date)}<br>${escapeHtml(ev.venue)}${ev.city ? ', ' + escapeHtml(ev.city) : ''}</div>
       </div>
-      <div class="event-price">${escapeHtml(ev.price || '')}</div>
+      <div class="event-price">${formatPrice(ev.price, ev.source)}</div>
     `;
     return card;
   }
