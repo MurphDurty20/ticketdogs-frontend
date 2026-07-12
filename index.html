@@ -411,6 +411,90 @@
   background: var(--amber-deep);
   color: var(--paper);
 }
+.row-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.row-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px;
+  text-decoration: none;
+  color: inherit;
+  position: relative;
+}
+
+.row-thumb {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background-size: cover;
+  background-position: center;
+  background-color: var(--line);
+}
+
+.row-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.row-name {
+  font-weight: 600;
+  margin: 0 0 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.row-meta {
+  color: var(--muted);
+  font-size: 0.82rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.row-price {
+  font-weight: 600;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-right: 6px;
+}
+
+.row-fav-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  padding: 4px;
+}
+
+#loadMoreBtn {
+  display: block;
+  margin: 20px auto 0;
+  background: none;
+  border: 1px solid var(--amber-deep);
+  color: var(--amber-deep);
+  border-radius: 999px;
+  padding: 10px 24px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+@media (max-width: 480px) {
+  .row-meta { display: none; }
+  .row-thumb { width: 52px; height: 52px; }
 }
 
 </style>
@@ -555,20 +639,20 @@
 
       status.textContent = "";
 
-      const headerRow = document.createElement('div');
-      headerRow.style.cssText = 'grid-column: 1 / -1; display:flex; justify-content:space-between; align-items:center; margin: 0 2px 4px;';
+        const headerRow = document.createElement('div');
+        headerRow.style.cssText = 'grid-column: 1 / -1; display:flex; justify-content:space-between; align-items:center; margin: 0 2px 4px;';
 
-      const countLine = document.createElement('p');
-      countLine.className = 'result-count';
-      countLine.style.margin = '0';
-      countLine.textContent = `${data.count} result${data.count === 1 ? '' : 's'} for "${data.keyword}"`;
+        const countLine = document.createElement('p');
+        countLine.className = 'result-count';
+        countLine.style.margin = '0';
+        countLine.textContent = `${data.count} result${data.count === 1 ? '' : 's'} for "${data.keyword}"`;
 
-      if (data.isCitySearch) {
-        const cityTag = document.createElement('span');
-        cityTag.textContent = ' 📍 City search';
-        cityTag.style.cssText = 'font-size:0.75rem; font-style:italic; color:var(--amber-deep); margin-left:6px;';
-        countLine.appendChild(cityTag);
-      }
+        if (data.isCitySearch) {
+          const cityTag = document.createElement('span');
+          cityTag.textContent = ' 📍 City search';
+          cityTag.style.cssText = 'font-size:0.75rem; font-style:italic; color:var(--amber-deep); margin-left:6px;';
+          countLine.appendChild(cityTag);
+        }
 
         const followBtn = document.createElement('button');
         followBtn.className = 'follow-btn';
@@ -580,7 +664,19 @@
         headerRow.appendChild(followBtn);
         results.appendChild(headerRow);
 
-        data.events.forEach(ev => results.appendChild(buildEventCard(ev)));
+        if (data.isCitySearch) {
+          currentCityResults = data.events;
+          citySearchDisplayCount = 10;
+
+          const listEl = document.createElement('div');
+          listEl.id = 'cityResultsList';
+          listEl.className = 'row-list';
+          results.appendChild(listEl);
+
+          renderCityResults();
+        } else {
+          data.events.forEach(ev => results.appendChild(buildEventCard(ev)));
+}
 
     } catch (err) {
       status.className = "status error";
@@ -935,6 +1031,70 @@ async function loadCityShows(city) {
     return localFavoriteIds.has(eventId);
   }
 
+  let currentCityResults = [];
+let citySearchDisplayCount = 10;
+
+function buildRowCard(ev) {
+  const card = document.createElement('div');
+  card.className = 'row-card';
+
+  const link = document.createElement('a');
+  link.href = ev.url || '#';
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  link.style.cssText = 'display:flex; align-items:center; gap:14px; flex:1; min-width:0; text-decoration:none; color:inherit;';
+
+  const thumbStyle = ev.image ? `background-image: url('${escapeHtml(ev.image)}');` : '';
+  const eventId = getFavoriteId(ev.url || '');
+  const isFav = isFavorited(eventId);
+
+  link.innerHTML = `
+    <div class="row-thumb" style="${thumbStyle}"></div>
+    <div class="row-details">
+      <p class="row-name">${escapeHtml(ev.name)}</p>
+      <div class="row-meta">${escapeHtml(ev.date)} · ${escapeHtml(ev.venue)}${ev.city ? ', ' + escapeHtml(ev.city) : ''}</div>
+    </div>
+    <div class="row-price">${formatPrice(ev.price, ev.source)}</div>
+  `;
+
+  const favBtn = document.createElement('button');
+  favBtn.className = 'row-fav-btn';
+  favBtn.textContent = isFav ? '★' : '☆';
+  favBtn.title = isFav ? 'Remove from favorites' : 'Save to favorites';
+  favBtn.style.color = isFav ? '#dca95e' : '#999';
+  favBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    await toggleFavorite(ev, eventId, favBtn);
+  });
+
+  card.appendChild(link);
+  card.appendChild(favBtn);
+  return card;
+}
+
+function renderCityResults() {
+  const listEl = document.getElementById('cityResultsList');
+  if (!listEl) return;
+
+  listEl.innerHTML = '';
+  const toShow = currentCityResults.slice(0, citySearchDisplayCount);
+  toShow.forEach(ev => listEl.appendChild(buildRowCard(ev)));
+
+  const existingBtn = document.getElementById('loadMoreBtn');
+  if (existingBtn) existingBtn.remove();
+
+  if (citySearchDisplayCount < currentCityResults.length) {
+    const loadMoreBtn = document.createElement('button');
+    loadMoreBtn.id = 'loadMoreBtn';
+    loadMoreBtn.textContent = `Load more (${currentCityResults.length - citySearchDisplayCount} remaining)`;
+    loadMoreBtn.addEventListener('click', () => {
+      citySearchDisplayCount += 10;
+      renderCityResults();
+    });
+    results.appendChild(loadMoreBtn);
+  }
+}
   // Simple stable ID generator for local "is this favorited" checks.
   // Doesn't need to match the backend's uuid5 hash — just needs to be
   // consistent locally so we can toggle star state without an extra fetch.
