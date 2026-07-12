@@ -542,13 +542,20 @@
 
       status.textContent = "";
 
-        const headerRow = document.createElement('div');
-        headerRow.style.cssText = 'grid-column: 1 / -1; display:flex; justify-content:space-between; align-items:center; margin: 0 2px 4px;';
+      const headerRow = document.createElement('div');
+      headerRow.style.cssText = 'grid-column: 1 / -1; display:flex; justify-content:space-between; align-items:center; margin: 0 2px 4px;';
 
-        const countLine = document.createElement('p');
-        countLine.className = 'result-count';
-        countLine.style.margin = '0';
-        countLine.textContent = `${data.count} result${data.count === 1 ? '' : 's'} for "${data.keyword}"`;
+      const countLine = document.createElement('p');
+      countLine.className = 'result-count';
+      countLine.style.margin = '0';
+      countLine.textContent = `${data.count} result${data.count === 1 ? '' : 's'} for "${data.keyword}"`;
+
+      if (data.isCitySearch) {
+        const cityTag = document.createElement('span');
+        cityTag.textContent = ' 📍 City search';
+        cityTag.style.cssText = 'font-size:0.75rem; font-style:italic; color:var(--amber-deep); margin-left:6px;';
+        countLine.appendChild(cityTag);
+      }
 
         const followBtn = document.createElement('button');
         followBtn.className = 'follow-btn';
