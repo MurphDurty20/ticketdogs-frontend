@@ -382,7 +382,7 @@
     cursor: pointer;
   }
 
-  #cityResultsList {
+  #resultsList {
   grid-column: 1 / -1;
 }
 
@@ -552,18 +552,23 @@
   <div class="search-card" style="position:relative;">
   <div style="flex:1; position:relative;">
     <input type="text" id="keyword" placeholder="Search an artist, team, or show…" autocomplete="off" style="width:100%; box-sizing:border-box; border:2px solid var(--line); border-radius:8px; padding:14px 90px 14px 16px; font-size:1rem; outline:none; font-family:inherit;">
+    <button id="dateIconBtn" type="button" title="Choose dates" style="display:none; position:absolute; right:14px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:1.15rem; line-height:1; color:var(--muted); padding:4px;">📅</button>
     <div id="suggestDropdown" style="display:none; position:absolute; top:100%; left:0; right:0; background:var(--card); border:1px solid var(--line); border-radius:8px; margin-top:4px; box-shadow:0 8px 20px -8px rgba(20,23,31,0.3); z-index:10; overflow:hidden;"></div>
+    <div id="datePopover" style="display:none; position:absolute; top:100%; right:0; margin-top:6px; background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px 14px; box-shadow:0 8px 20px -8px rgba(20,23,31,0.3); z-index:20; white-space:nowrap;">
+      <div style="display:flex; align-items:center; gap:8px; font-size:0.85rem; color:var(--muted);">
+        <label for="dateFrom">Dates:</label>
+        <input type="date" id="dateFrom" style="font-family:inherit; font-size:0.85rem; border:1px solid var(--line); border-radius:6px; padding:4px 6px; background:var(--paper); color:var(--ink);">
+        <span>to</span>
+        <input type="date" id="dateTo" style="font-family:inherit; font-size:0.85rem; border:1px solid var(--line); border-radius:6px; padding:4px 6px; background:var(--paper); color:var(--ink);">
+      </div>
+      <div style="text-align:right; margin-top:8px;">
+        <button id="clearDatesBtn" type="button" style="display:none; background:none; border:none; color:var(--muted); cursor:pointer; font-size:0.8rem; text-decoration:underline; font-family:inherit;">Clear</button>
+      </div>
+    </div>
   </div>
   <button id="searchBtn">Search</button>
 </div>
 
-<div id="dateRangeRow" style="display:none; align-items:center; justify-content:center; gap:8px; margin-top:10px; font-size:0.85rem; color:var(--muted);">
-  <label for="dateFrom">Dates:</label>
-  <input type="date" id="dateFrom" style="font-family:inherit; font-size:0.85rem; border:1px solid var(--line); border-radius:6px; padding:4px 6px; background:var(--card); color:var(--ink);">
-  <span>to</span>
-  <input type="date" id="dateTo" style="font-family:inherit; font-size:0.85rem; border:1px solid var(--line); border-radius:6px; padding:4px 6px; background:var(--card); color:var(--ink);">
-  <button id="clearDatesBtn" type="button" style="background:none; border:none; color:var(--muted); cursor:pointer; font-size:0.8rem; text-decoration:underline; font-family:inherit; display:none;">Clear</button>
-</div>
 <div id="categoryRow" style="display:none; align-items:center; justify-content:center; flex-wrap:wrap; gap:8px; margin-top:10px;"></div>
 
 <div style="text-align:center; margin-top:8px;">
@@ -611,7 +616,8 @@
   const button = document.getElementById('searchBtn');
   const status = document.getElementById('status');
   const results = document.getElementById('results');
-  const dateRangeRow = document.getElementById('dateRangeRow');
+  const dateIconBtn = document.getElementById('dateIconBtn');
+  const datePopover = document.getElementById('datePopover');
   const dateFromInput = document.getElementById('dateFrom');
   const dateToInput = document.getElementById('dateTo');
   const clearDatesBtn = document.getElementById('clearDatesBtn');
@@ -638,8 +644,8 @@
       chip.addEventListener('click', () => {
         currentCategory = cat;
         renderCategoryChips();
-        citySearchDisplayCount = 10;
-        renderCityResults();
+        resultsDisplayCount = 10;
+        renderResultsList();
       });
       categoryRow.appendChild(chip);
     });
@@ -647,30 +653,62 @@
 
   renderCategoryChips();
 
-  // The date range picker only makes sense for city searches, so show it
-  // once the typed text matches a known city and hide it otherwise.
+  // Date range and category filtering now work for any search, so show the
+  // controls as soon as there's something typed in the box.
   function updateDateRangeVisibility() {
-    const isCity = MAJOR_CITIES.some(c => c.toLowerCase() === input.value.trim().toLowerCase());
-    dateRangeRow.style.display = isCity ? 'flex' : 'none';
-    categoryRow.style.display = isCity ? 'flex' : 'none';
+    const hasQuery = input.value.trim().length > 0;
+    dateIconBtn.style.display = hasQuery ? 'block' : 'none';
+    categoryRow.style.display = hasQuery ? 'flex' : 'none';
+    if (!hasQuery) datePopover.style.display = 'none';
   }
 
   input.addEventListener('input', updateDateRangeVisibility);
 
+  dateIconBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    datePopover.style.display = datePopover.style.display === 'none' ? 'block' : 'none';
+  });
+
+  // Close the popover on an outside click, but not on clicks inside it.
+  document.addEventListener('click', (e) => {
+    if (datePopover.style.display !== 'none' && !datePopover.contains(e.target) && e.target !== dateIconBtn) {
+      datePopover.style.display = 'none';
+    }
+  });
+
+  datePopover.addEventListener('click', (e) => e.stopPropagation());
+
   clearDatesBtn.addEventListener('click', () => {
     dateFromInput.value = '';
     dateToInput.value = '';
-    clearDatesBtn.style.display = 'none';
+    dateToInput.removeAttribute('min');
+    updateClearDatesVisibility();
   });
 
   function updateClearDatesVisibility() {
-    clearDatesBtn.style.display = (dateFromInput.value || dateToInput.value) ? 'inline' : 'none';
+    const hasDates = dateFromInput.value || dateToInput.value;
+    clearDatesBtn.style.display = hasDates ? 'inline' : 'none';
+    dateIconBtn.style.color = hasDates ? 'var(--amber-deep)' : 'var(--muted)';
   }
 
-  dateFromInput.addEventListener('change', updateClearDatesVisibility);
+  dateFromInput.addEventListener('change', () => {
+    updateClearDatesVisibility();
+    // Carry the start date forward as a starting point for the end date,
+    // so picking Sept 15 as "from" has "to" already sitting on Sept 15
+    // rather than making the person hunt back through the calendar.
+    if (dateFromInput.value) {
+      dateToInput.min = dateFromInput.value;
+      if (!dateToInput.value || dateToInput.value < dateFromInput.value) {
+        dateToInput.value = dateFromInput.value;
+      }
+    } else {
+      dateToInput.removeAttribute('min');
+    }
+  });
   dateToInput.addEventListener('change', updateClearDatesVisibility);
 
   async function runSearch() {
+    datePopover.style.display = 'none';
     const keyword = input.value.trim();
     if (!keyword) {
       status.textContent = "Type something to search for — an artist, a team, a show.";
@@ -746,24 +784,21 @@
         headerRow.appendChild(followBtn);
         results.appendChild(headerRow);
 
-        if (data.isCitySearch) {
-          currentCityResults = data.events;
-          citySearchDisplayCount = 10;
-          currentCategory = "All";
-          renderCategoryChips();
-          currentSearchCity = data.keyword;
-          cityCurrentPage = data.page || 0;
-          cityTotalPages = data.totalPages || 1;
+        currentResults = data.events;
+        resultsDisplayCount = 10;
+        currentCategory = "All";
+        renderCategoryChips();
+        currentSearchTerm = data.keyword;
+        currentSearchIsCity = !!data.isCitySearch;
+        resultsCurrentPage = data.page || 0;
+        resultsTotalPages = data.totalPages || 1;
 
-          const listEl = document.createElement('div');
-          listEl.id = 'cityResultsList';
-          listEl.className = 'row-list';
-          results.appendChild(listEl);
+        const listEl = document.createElement('div');
+        listEl.id = 'resultsList';
+        listEl.className = 'row-list';
+        results.appendChild(listEl);
 
-          renderCityResults();
-        } else {
-          data.events.forEach(ev => results.appendChild(buildEventCard(ev)));
-}
+        renderResultsList();
 
     } catch (err) {
       status.className = "status error";
@@ -1107,11 +1142,12 @@ async function loadCityShows(city) {
     return localFavoriteIds.has(eventId);
   }
 
-  let currentCityResults = [];
-let citySearchDisplayCount = 10;
-let cityCurrentPage = 0;
-let cityTotalPages = 1;
-let currentSearchCity = null;
+  let currentResults = [];
+let resultsDisplayCount = 10;
+let resultsCurrentPage = 0;
+let resultsTotalPages = 1;
+let currentSearchTerm = null;
+let currentSearchIsCity = false;
 let isFetchingMorePage = false;
 
 function buildRowCard(ev) {
@@ -1153,10 +1189,10 @@ function buildRowCard(ev) {
   return card;
 }
 
-async function fetchNextCityPage() {
-  if (!currentSearchCity || isFetchingMorePage) return;
-  const nextPage = cityCurrentPage + 1;
-  if (nextPage >= cityTotalPages) return;
+async function fetchNextResultsPage() {
+  if (!currentSearchTerm || isFetchingMorePage) return;
+  const nextPage = resultsCurrentPage + 1;
+  if (nextPage >= resultsTotalPages) return;
 
   isFetchingMorePage = true;
   const btn = document.getElementById('loadMoreBtn');
@@ -1166,7 +1202,12 @@ async function fetchNextCityPage() {
   }
 
   try {
-    let url = `${AUTH_API}/searcheventsbycity?city=${encodeURIComponent(currentSearchCity)}&page=${nextPage}`;
+    let url;
+    if (currentSearchIsCity) {
+      url = `${AUTH_API}/searcheventsbycity?city=${encodeURIComponent(currentSearchTerm)}&page=${nextPage}`;
+    } else {
+      url = `${API_URL}?keyword=${encodeURIComponent(currentSearchTerm)}&page=${nextPage}`;
+    }
     if (dateFromInput.value) url += `&startDate=${encodeURIComponent(dateFromInput.value)}`;
     if (dateToInput.value) url += `&endDate=${encodeURIComponent(dateToInput.value)}`;
 
@@ -1175,37 +1216,37 @@ async function fetchNextCityPage() {
 
     if (res.ok && data.events) {
       // Guard against duplicates in case a page overlaps with what we already have.
-      const seenKeys = new Set(currentCityResults.map(ev => `${ev.name}|${ev.date}|${ev.venue}`));
+      const seenKeys = new Set(currentResults.map(ev => `${ev.name}|${ev.date}|${ev.venue}`));
       const newEvents = data.events.filter(ev => !seenKeys.has(`${ev.name}|${ev.date}|${ev.venue}`));
-      currentCityResults = currentCityResults.concat(newEvents);
-      cityCurrentPage = data.page;
-      cityTotalPages = data.totalPages;
+      currentResults = currentResults.concat(newEvents);
+      resultsCurrentPage = data.page;
+      resultsTotalPages = data.totalPages;
     }
   } catch (err) {
     console.error('Failed to fetch additional results page', err);
   } finally {
     isFetchingMorePage = false;
-    citySearchDisplayCount += 10;
-    renderCityResults();
+    resultsDisplayCount += 10;
+    renderResultsList();
   }
 }
 
-function renderCityResults() {
-  const listEl = document.getElementById('cityResultsList');
+function renderResultsList() {
+  const listEl = document.getElementById('resultsList');
   if (!listEl) return;
 
   const filtered = currentCategory === "All"
-    ? currentCityResults
-    : currentCityResults.filter(ev => ev.category === currentCategory);
+    ? currentResults
+    : currentResults.filter(ev => ev.category === currentCategory);
 
   listEl.innerHTML = '';
-  const toShow = filtered.slice(0, citySearchDisplayCount);
+  const toShow = filtered.slice(0, resultsDisplayCount);
   toShow.forEach(ev => listEl.appendChild(buildRowCard(ev)));
 
   const existingBtn = document.getElementById('loadMoreBtn');
   if (existingBtn) existingBtn.remove();
 
-  const hasMorePages = (cityCurrentPage + 1) < cityTotalPages;
+  const hasMorePages = (resultsCurrentPage + 1) < resultsTotalPages;
 
   if (filtered.length === 0) {
     const emptyMsg = document.createElement('p');
@@ -1217,19 +1258,19 @@ function renderCityResults() {
     listEl.appendChild(emptyMsg);
 
     if (hasMorePages) {
-      fetchNextCityPage();
+      fetchNextResultsPage();
     }
     return;
   }
 
-  if (citySearchDisplayCount < filtered.length) {
+  if (resultsDisplayCount < filtered.length) {
     // We already have enough matching results fetched to fill the next page.
     const loadMoreBtn = document.createElement('button');
     loadMoreBtn.id = 'loadMoreBtn';
-    loadMoreBtn.textContent = `Load more (${filtered.length - citySearchDisplayCount} remaining)`;
+    loadMoreBtn.textContent = `Load more (${filtered.length - resultsDisplayCount} remaining)`;
     loadMoreBtn.addEventListener('click', () => {
-      citySearchDisplayCount += 10;
-      renderCityResults();
+      resultsDisplayCount += 10;
+      renderResultsList();
     });
     results.appendChild(loadMoreBtn);
   } else if (hasMorePages) {
@@ -1238,7 +1279,7 @@ function renderCityResults() {
     const loadMoreBtn = document.createElement('button');
     loadMoreBtn.id = 'loadMoreBtn';
     loadMoreBtn.textContent = 'Load more';
-    loadMoreBtn.addEventListener('click', fetchNextCityPage);
+    loadMoreBtn.addEventListener('click', fetchNextResultsPage);
     results.appendChild(loadMoreBtn);
   }
 }
