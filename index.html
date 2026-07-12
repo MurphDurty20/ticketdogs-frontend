@@ -453,6 +453,9 @@
   </div>
 
   <div id="suggestions" class="suggestions"></div>
+<div style="text-align:center; margin-top:8px;">
+  <button id="useLocationBtn" style="background:none; border:none; color:var(--muted); cursor:pointer; font-size:0.85rem; text-decoration:underline; font-family:inherit;">📍 Use my location</button>
+</div>
 
   <div id="status" class="status"></div>
   <div id="results"></div>
@@ -655,6 +658,43 @@
     loadTrending();
   }
 }
+
+document.getElementById('useLocationBtn').addEventListener('click', () => {
+  const btn = document.getElementById('useLocationBtn');
+
+  if (!navigator.geolocation) {
+    btn.textContent = 'Location not supported on this browser';
+    return;
+  }
+
+  btn.textContent = 'Finding your location...';
+
+  navigator.geolocation.getCurrentPosition(
+    async (position) => {
+      const lat = position.coords.latitude;
+      const lon = position.coords.longitude;
+
+      try {
+        const res = await fetch(`${AUTH_API}/getnearestcity?lat=${lat}&lon=${lon}`);
+        const data = await res.json();
+
+        if (res.ok && data.city) {
+          btn.textContent = `📍 Showing shows near ${data.city}`;
+          loadCityShows(data.city);
+        } else {
+          btn.textContent = "Couldn't determine your city";
+        }
+      } catch (err) {
+        btn.textContent = "Couldn't determine your city";
+        console.error(err);
+      }
+    },
+    (err) => {
+      btn.textContent = 'Location permission denied';
+      console.error(err);
+    }
+  );
+});
 
 async function loadCityShows(city) {
   status.className = "status";
