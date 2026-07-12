@@ -313,6 +313,7 @@
   let allFavorites = [];
   let allArtistShows = [];
   let followedArtistCount = 0;
+  let selectedArtistFilters = new Set();
 
   if (!token) {
     window.location.href = '/';
@@ -417,6 +418,18 @@
     const chipsEl = document.getElementById('artistChips');
     const emptyEl = document.getElementById('artistsEmpty');
 
+    function applyChipSelectedStyle(chipEl, isSelected) {
+      if (isSelected) {
+        chipEl.style.background = 'var(--amber-deep)';
+        chipEl.style.borderColor = 'var(--amber-deep)';
+        chipEl.style.color = 'var(--paper)';
+      } else {
+        chipEl.style.background = 'var(--card)';
+        chipEl.style.borderColor = 'var(--line)';
+        chipEl.style.color = 'var(--ink)';
+      }
+    }
+
     try {
       const res = await fetch(`${API_URL}/getfollowedartists`, {
         headers: { 'X-Session-Token': token }
@@ -431,17 +444,37 @@
       data.artists.forEach(artist => {
         const chip = document.createElement('div');
         chip.className = 'artist-chip';
-        chip.innerHTML = `<span>${escapeHtml(artist)}</span>`;
+
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = artist;
+        nameSpan.style.cursor = 'pointer';
+        nameSpan.title = `Filter shows to ${artist}`;
+        applyChipSelectedStyle(chip, selectedArtistFilters.has(artist.toLowerCase()));
+
+        nameSpan.addEventListener('click', () => {
+          const key = artist.toLowerCase();
+          if (selectedArtistFilters.has(key)) {
+            selectedArtistFilters.delete(key);
+          } else {
+            selectedArtistFilters.add(key);
+          }
+          applyChipSelectedStyle(chip, selectedArtistFilters.has(key));
+          renderArtistShows();
+        });
+
+        chip.appendChild(nameSpan);
 
         const removeBtn = document.createElement('button');
         removeBtn.textContent = '✕';
         removeBtn.title = `Unfollow ${artist}`;
-        removeBtn.addEventListener('click', async () => {
+        removeBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
           await fetch(`${API_URL}/unfollowartist`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-Session-Token': token },
             body: JSON.stringify({ artist })
           });
+          selectedArtistFilters.delete(artist.toLowerCase());
           chip.remove();
           if (chipsEl.children.length === 0) emptyEl.style.display = 'block';
           loadArtistShows();
@@ -486,8 +519,12 @@
 
     let shows = [...allArtistShows];
 
+    if (selectedArtistFilters.size > 0) {
+      shows = shows.filter(ev => selectedArtistFilters.has((ev.followedArtist || '').toLowerCase()));
+    }
+
     if (hideTribute) {
-      shows = shows.filter(ev => !looksLikeTribute(ev.name));
+      shows = shows.filter(ev => !looksLikeTribute(ev.name, ev.followedArtist));
     }
 
     if (sortBy === 'date') {
@@ -499,9 +536,13 @@
     }
 
     if (shows.length === 0) {
-      emptyEl.textContent = followedArtistCount > 0
-        ? "No upcoming shows found for the artists you follow right now."
-        : "Follow an artist or team above to see their upcoming shows here.";
+      if (selectedArtistFilters.size > 0) {
+        emptyEl.textContent = "No upcoming shows found for the selected artist(s).";
+      } else {
+        emptyEl.textContent = followedArtistCount > 0
+          ? "No upcoming shows found for the artists you follow right now."
+          : "Follow an artist or team above to see their upcoming shows here.";
+      }
       emptyEl.style.display = 'block';
       return;
     }
@@ -512,16 +553,31 @@
   document.getElementById('showsSort').addEventListener('change', renderArtistShows);
   document.getElementById('hideTributeCheckbox').addEventListener('change', renderArtistShows);
 
-  function looksLikeTribute(name) {
+  function looksLikeTribute(name, artistName) {
     if (!name) return false;
     const flags = [
       'tribute', 'a salute to', 'the music of', 'cover band',
-      'ultimate ', 'experience -', ' experience:', 'reimagined',
+      'ultimate ', ' experience', 'reimagined',
       'party:', 'themed night', 'dance party', 'silent disco',
       'sing-along', 'trivia night', 'drag brunch'
     ];
     const lower = name.toLowerCase();
-    return flags.some(flag => lower.includes(flag));
+    if (flags.some(flag => lower.includes(flag))) return true;
+
+    // Fan/themed nights often take the form "<catchy title> - An <Artist>
+    // Night" (e.g. "girl so in love - An Olivia Rodrigo Night"), which
+    // doesn't contain any of the flagged words above. Since we know which
+    // followed artist this show is attributed to, check for that specific
+    // "a/an ... <artist name> ... night" construction. Scoping it to the
+    // actual artist name (rather than a bare "night" flag) avoids false-
+    // flagging legitimate events like theater "Opening Night" listings.
+    if (artistName) {
+      const escaped = artistName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const nightPattern = new RegExp(`\\ban?\\s+.*${escaped}.*\\bnight\\b`, 'i');
+      if (nightPattern.test(name)) return true;
+    }
+
+    return false;
   }
 
   async function loadFavorites() {
