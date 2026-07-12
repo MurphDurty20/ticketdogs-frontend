@@ -809,6 +809,7 @@
         try {
           const suggestRes = await fetch(`${AUTH_API}/suggestartists?keyword=${encodeURIComponent(keyword)}`);
           const suggestData = await suggestRes.json();
+          rememberAttractionIds(suggestData.attractions);
           const topSuggestion = (suggestData.suggestions || [])[0];
 
           if (topSuggestion && topSuggestion.toLowerCase() !== keyword.toLowerCase()) {
@@ -944,6 +945,7 @@ async function fetchSuggestions(query) {
   try {
     const res = await fetch(`${AUTH_API}/suggestartists?keyword=${encodeURIComponent(query)}`);
     const data = await res.json();
+    rememberAttractionIds(data.attractions);
 
     const artistSuggestions = data.suggestions || [];
 
@@ -1447,6 +1449,18 @@ function renderResultsList() {
 
   let followedArtistNames = new Set();
 
+  // Maps lowercased artist/team name -> verified Ticketmaster attraction ID,
+  // populated as suggestion results come back. Used at follow-time so we can
+  // pin the follow to the real artist's attraction instead of a loose
+  // keyword text match (which is what pulls in tribute acts/cover bands).
+  let knownAttractionIds = new Map();
+
+  function rememberAttractionIds(attractions) {
+    (attractions || []).forEach(a => {
+      if (a && a.name && a.id) knownAttractionIds.set(a.name.toLowerCase(), a.id);
+    });
+  }
+
 async function loadFollowedArtists() {
   const token = getSessionToken();
   if (!token) return;
@@ -1491,10 +1505,11 @@ async function toggleFollowArtist(artistName, btnEl) {
       });
       followedArtistNames.delete(artistName.toLowerCase());
     } else {
+      const attractionId = knownAttractionIds.get(artistName.toLowerCase());
       await fetch(`${AUTH_API}/followartist`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Session-Token': token },
-        body: JSON.stringify({ artist: artistName })
+        body: JSON.stringify(attractionId ? { artist: artistName, attractionId } : { artist: artistName })
       });
       followedArtistNames.add(artistName.toLowerCase());
     }
