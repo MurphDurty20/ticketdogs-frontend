@@ -608,17 +608,30 @@ input.addEventListener('input', () => {
 });
 
 async function fetchSuggestions(query) {
+  const lowerQuery = query.toLowerCase();
+  const matchingCities = MAJOR_CITIES.filter(c => c.toLowerCase().startsWith(lowerQuery));
+
   try {
     const res = await fetch(`${AUTH_API}/suggestartists?keyword=${encodeURIComponent(query)}`);
     const data = await res.json();
 
-    if (!data.suggestions || data.suggestions.length === 0) {
+    const artistSuggestions = data.suggestions || [];
+
+    // Prioritize matching cities at the top of the list, then artist/event
+    // suggestions below. Avoid duplicating a city name that also happens
+    // to appear in the artist suggestions.
+    const combined = [
+      ...matchingCities,
+      ...artistSuggestions.filter(name => !matchingCities.some(c => c.toLowerCase() === name.toLowerCase()))
+    ];
+
+    if (combined.length === 0) {
       suggestDropdown.style.display = 'none';
       return;
     }
 
     suggestDropdown.innerHTML = '';
-data.suggestions.forEach(name => {
+    combined.forEach(name => {
   const item = document.createElement('div');
   item.className = 'suggest-item';
   item.style.cssText = 'display:flex; justify-content:space-between; align-items:center;';
