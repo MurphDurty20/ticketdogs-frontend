@@ -11,47 +11,130 @@
   body { margin:0; background:var(--paper); color:var(--ink); font-family:'Segoe UI', system-ui, sans-serif; }
   header { padding: 30px 20px; text-align:center; }
   a.back { color: var(--amber-deep); text-decoration:none; font-size:0.9rem; }
-  main { max-width: 980px; margin: 0 auto 80px; padding: 0 20px; }
+  main { max-width: 780px; margin: 0 auto 80px; padding: 0 20px; }
 
   h2 { font-size: 1.3rem; margin: 40px 0 12px; }
   h2:first-of-type { margin-top: 20px; }
 
-  #grid, #artistShowsGrid { display:grid; grid-template-columns: repeat(3, 1fr); gap:20px; margin-top: 10px; }
-  .event-card { background:var(--card); border:1px solid var(--line); border-radius:14px; overflow:hidden; text-decoration:none; color:inherit; display:flex; flex-direction:column; position:relative; }
-  .event-thumb { width:100%; aspect-ratio:1/1; background-size:cover; background-position:center; background-color:var(--line); }
-  .event-content { padding:12px; flex:1; }
-  .event-name { font-weight:600; margin:0 0 6px; }
-  .event-meta { color:var(--muted); font-size:0.85rem; }
-  .event-price { padding: 0 12px 12px; font-weight:600; }
-  .remove-btn { position:absolute; top:8px; right:8px; background:rgba(255,255,255,0.9); border:none; border-radius:50%; width:34px; height:34px; cursor:pointer; font-size:1.1rem; }
-  .empty { text-align:center; color:var(--muted); margin-top: 20px; }
+  #citySelect {
+    font-family: inherit;
+    font-size: 0.9rem;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 3px 6px;
+    background: var(--card);
+    color: var(--ink);
+  }
+
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .sort-control {
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+
+  .sort-control select {
+    font-family: inherit;
+    font-size: 0.85rem;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 3px 6px;
+    background: var(--card);
+    color: var(--ink);
+  }
+
+  .row-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .row-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 12px;
+    text-decoration: none;
+    color: inherit;
+    position: relative;
+  }
+
+  .row-thumb {
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    background-size: cover;
+    background-position: center;
+    background-color: var(--line);
+  }
+
+  .row-details {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .row-name {
+    font-weight: 600;
+    margin: 0 0 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .row-meta {
+    color: var(--muted);
+    font-size: 0.82rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .row-price {
+    font-weight: 600;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-right: 6px;
+  }
+
+  .price-cta {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  .row-remove {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    padding: 4px;
+  }
 
   .artist-chip-row { display:flex; flex-wrap:wrap; gap:10px; margin-top: 10px; }
   .artist-chip { background:var(--card); border:1px solid var(--line); border-radius:999px; padding:8px 16px; font-size:0.9rem; display:flex; align-items:center; gap:8px; }
   .artist-chip button { background:none; border:none; color:var(--muted); cursor:pointer; font-size:1rem; line-height:1; padding:0; }
 
-  .city-tag {
-    display:inline-block;
-    background: var(--amber-deep);
-    color: var(--paper);
-    font-size: 0.65rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    padding: 3px 8px;
-    border-radius: 999px;
-    margin-bottom: 6px;
-  
+  .empty { text-align:center; color:var(--muted); margin-top: 20px; }
+
+  @media (max-width: 480px) {
+    .row-meta { display: none; }
+    .row-thumb { width: 52px; height: 52px; }
   }
-  #citySelect {
-  font-family: inherit;
-  font-size: 0.9rem;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 3px 6px;
-  background: var(--card);
-  color: var(--ink);
-}
 </style>
 </head>
 <body>
@@ -61,81 +144,86 @@
 </header>
 <main>
   <div style="text-align:center; margin: 10px 0 30px;">
-  Home city: <select id="citySelect"><option value="">Choose your city</option></select>
+    Home city: <select id="citySelect"><option value="">Choose your city</option></select>
   </div>
+
+  <div class="section-header">
+    <h2 style="margin-bottom:0;">My Favorites</h2>
+    <span class="sort-control">
+      Sort by:
+      <select id="favSort">
+        <option value="date">Upcoming date</option>
+        <option value="name">Name</option>
+        <option value="city">City</option>
+      </select>
+    </span>
+  </div>
+  <div id="favList" class="row-list"></div>
+  <p id="favEmpty" class="empty" style="display:none;">No favorites yet. Star an event from the homepage to save it here.</p>
+
   <h2>Followed Artists &amp; Teams</h2>
   <div id="artistChips" class="artist-chip-row"></div>
   <p id="artistsEmpty" class="empty" style="display:none;">You're not following anyone yet. Search for an artist or team and hit "Follow" to see their shows here.</p>
 
   <h2>Upcoming Shows from Artists You Follow</h2>
-  <div id="artistShowsGrid"></div>
+  <div id="artistShowsList" class="row-list"></div>
   <p id="artistShowsEmpty" class="empty" style="display:none;"></p>
-
-  <h2>My Favorites</h2>
-  <div id="grid"></div>
-  <p id="empty" class="empty" style="display:none;">No favorites yet. Star an event from the homepage to save it here.</p>
 </main>
 <script>
   const API_URL = "https://ticketdogs-api.azurewebsites.net/api";
   const token = localStorage.getItem('sessionToken');
 
+  let allFavorites = [];
+
   if (!token) {
-  window.location.href = '/';
-} else {
-  loadFollowedArtists();
-  loadArtistShows();
-  loadFavorites();
-  loadCityOptions();
-}
-
-function formatPrice(price, source) {
-  if (!price || price === 'Price not listed') {
-    const label = source ? `See on ${escapeHtml(source)}` : 'See price';
-    return `<span class="price-cta">${label} →</span>`;
-  }
-  return escapeHtml(price);
-}
-
-async function loadCityOptions() {
-  const citySelect = document.getElementById('citySelect');
-
-  try {
-    const res = await fetch(`${API_URL}/getcities`);
-    const data = await res.json();
-    data.cities.forEach(city => {
-      const opt = document.createElement('option');
-      opt.value = city;
-      opt.textContent = city;
-      citySelect.appendChild(opt);
-    });
-
-    const profileRes = await fetch(`${API_URL}/getprofile`, {
-      headers: { 'X-Session-Token': token }
-    });
-    const profileData = await profileRes.json();
-    if (profileRes.ok && profileData.homeCity) {
-      citySelect.value = profileData.homeCity;
-    }
-  } catch (err) {
-    console.error('Failed to load city options', err);
+    window.location.href = '/';
+  } else {
+    loadFollowedArtists();
+    loadArtistShows();
+    loadFavorites();
+    loadCityOptions();
   }
 
-  citySelect.addEventListener('change', async () => {
-    const city = citySelect.value;
-    if (!city) return;
+  async function loadCityOptions() {
+    const citySelect = document.getElementById('citySelect');
 
     try {
-      await fetch(`${API_URL}/setcity`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Session-Token': token },
-        body: JSON.stringify({ city })
+      const res = await fetch(`${API_URL}/getcities`);
+      const data = await res.json();
+      data.cities.forEach(city => {
+        const opt = document.createElement('option');
+        opt.value = city;
+        opt.textContent = city;
+        citySelect.appendChild(opt);
       });
-      loadArtistShows(); // refresh shows list so city-priority sorting updates
+
+      const profileRes = await fetch(`${API_URL}/getprofile`, {
+        headers: { 'X-Session-Token': token }
+      });
+      const profileData = await profileRes.json();
+      if (profileRes.ok && profileData.homeCity) {
+        citySelect.value = profileData.homeCity;
+      }
     } catch (err) {
-      console.error('Failed to save city', err);
+      console.error('Failed to load city options', err);
     }
-  });
-}
+
+    citySelect.addEventListener('change', async () => {
+      const city = citySelect.value;
+      if (!city) return;
+
+      try {
+        await fetch(`${API_URL}/setcity`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Session-Token': token },
+          body: JSON.stringify({ city })
+        });
+        loadArtistShows();
+      } catch (err) {
+        console.error('Failed to save city', err);
+      }
+    });
+  }
 
   async function loadFollowedArtists() {
     const chipsEl = document.getElementById('artistChips');
@@ -168,7 +256,7 @@ async function loadCityOptions() {
           });
           chip.remove();
           if (chipsEl.children.length === 0) emptyEl.style.display = 'block';
-          loadArtistShows(); // refresh shows list since the artist list changed
+          loadArtistShows();
         });
 
         chip.appendChild(removeBtn);
@@ -180,9 +268,9 @@ async function loadCityOptions() {
   }
 
   async function loadArtistShows() {
-    const showsGrid = document.getElementById('artistShowsGrid');
+    const showsList = document.getElementById('artistShowsList');
     const emptyEl = document.getElementById('artistShowsEmpty');
-    showsGrid.innerHTML = '';
+    showsList.innerHTML = '';
     emptyEl.style.display = 'none';
 
     try {
@@ -199,7 +287,7 @@ async function loadCityOptions() {
         return;
       }
 
-      data.shows.forEach(ev => showsGrid.appendChild(buildEventCard(ev)));
+      data.shows.forEach(ev => showsList.appendChild(buildRowCard(ev)));
     } catch (err) {
       emptyEl.textContent = "Couldn't load shows right now.";
       emptyEl.style.display = 'block';
@@ -208,8 +296,7 @@ async function loadCityOptions() {
   }
 
   async function loadFavorites() {
-    const grid = document.getElementById('grid');
-    const emptyMsg = document.getElementById('empty');
+    const emptyMsg = document.getElementById('favEmpty');
 
     try {
       const res = await fetch(`${API_URL}/getfavorites`, {
@@ -222,59 +309,79 @@ async function loadCityOptions() {
         return;
       }
 
-      if (!data.favorites || data.favorites.length === 0) {
+      allFavorites = data.favorites || [];
+
+      if (allFavorites.length === 0) {
         emptyMsg.style.display = 'block';
         return;
       }
 
-      data.favorites.forEach(fav => grid.appendChild(buildFavoriteCard(fav)));
+      renderFavorites();
     } catch (err) {
       emptyMsg.textContent = 'Something went wrong loading your favorites.';
       emptyMsg.style.display = 'block';
     }
   }
 
-  function buildEventCard(ev) {
+  function renderFavorites() {
+    const favList = document.getElementById('favList');
+    favList.innerHTML = '';
+
+    const sortBy = document.getElementById('favSort').value;
+    const sorted = [...allFavorites];
+
+    if (sortBy === 'date') {
+      sorted.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    } else if (sortBy === 'name') {
+      sorted.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    } else if (sortBy === 'city') {
+      sorted.sort((a, b) => (a.city || '').localeCompare(b.city || ''));
+    }
+
+    sorted.forEach(fav => favList.appendChild(buildFavoriteRowCard(fav)));
+  }
+
+  document.getElementById('favSort').addEventListener('change', renderFavorites);
+
+  function buildRowCard(ev) {
     const card = document.createElement('a');
     card.href = ev.url || '#';
     card.target = '_blank';
     card.rel = 'noopener noreferrer';
-    card.className = 'event-card';
-    card.style.textDecoration = 'none';
-    card.style.color = 'inherit';
+    card.className = 'row-card';
 
     const thumbStyle = ev.image ? `background-image: url('${escapeHtml(ev.image)}');` : '';
 
     card.innerHTML = `
-      <div class="event-thumb" style="${thumbStyle}"></div>
-      <div class="event-content">
-        <p class="event-name">${escapeHtml(ev.name)}</p>
-        <div class="event-meta">${escapeHtml(ev.date)}<br>${escapeHtml(ev.venue)}${ev.city ? ', ' + escapeHtml(ev.city) : ''}</div>
+      <div class="row-thumb" style="${thumbStyle}"></div>
+      <div class="row-details">
+        <p class="row-name">${escapeHtml(ev.name)}</p>
+        <div class="row-meta">${escapeHtml(ev.date)} · ${escapeHtml(ev.venue)}${ev.city ? ', ' + escapeHtml(ev.city) : ''}</div>
       </div>
-      <div class="event-price">${formatPrice(ev.price, ev.source)}</div>
+      <div class="row-price">${formatPrice(ev.price, ev.source)}</div>
     `;
     return card;
   }
 
-  function buildFavoriteCard(fav) {
+  function buildFavoriteRowCard(fav) {
     const card = document.createElement('div');
-    card.className = 'event-card';
+    card.className = 'row-card';
 
     const thumbStyle = fav.image ? `background-image: url('${escapeHtml(fav.image)}');` : '';
 
     card.innerHTML = `
-      <a href="${fav.url || '#'}" target="_blank" rel="noopener noreferrer" style="text-decoration:none; color:inherit;">
-        <div class="event-thumb" style="${thumbStyle}"></div>
-        <div class="event-content">
-          <p class="event-name">${escapeHtml(fav.name)}</p>
-          <div class="event-meta">${escapeHtml(fav.date)}<br>${escapeHtml(fav.venue)}${fav.city ? ', ' + escapeHtml(fav.city) : ''}</div>
+      <a href="${fav.url || '#'}" target="_blank" rel="noopener noreferrer" style="display:flex; align-items:center; gap:14px; flex:1; min-width:0; text-decoration:none; color:inherit;">
+        <div class="row-thumb" style="${thumbStyle}"></div>
+        <div class="row-details">
+          <p class="row-name">${escapeHtml(fav.name)}</p>
+          <div class="row-meta">${escapeHtml(fav.date)} · ${escapeHtml(fav.venue)}${fav.city ? ', ' + escapeHtml(fav.city) : ''}</div>
         </div>
-        <div class="event-price">${formatPrice(fav.price, fav.source)}</div>
+        <div class="row-price">${formatPrice(fav.price, fav.source)}</div>
       </a>
     `;
 
     const removeBtn = document.createElement('button');
-    removeBtn.className = 'remove-btn';
+    removeBtn.className = 'row-remove';
     removeBtn.textContent = '✕';
     removeBtn.addEventListener('click', async () => {
       await fetch(`${API_URL}/removefavorite`, {
@@ -282,13 +389,21 @@ async function loadCityOptions() {
         headers: { 'Content-Type': 'application/json', 'X-Session-Token': token },
         body: JSON.stringify({ id: fav.id })
       });
+      allFavorites = allFavorites.filter(f => f.id !== fav.id);
       card.remove();
-      const grid = document.getElementById('grid');
-      if (grid.children.length === 0) document.getElementById('empty').style.display = 'block';
+      if (allFavorites.length === 0) document.getElementById('favEmpty').style.display = 'block';
     });
 
     card.appendChild(removeBtn);
     return card;
+  }
+
+  function formatPrice(price, source) {
+    if (!price || price === 'Price not listed') {
+      const label = source ? `See on ${escapeHtml(source)}` : 'See price';
+      return `<span class="price-cta">${label} →</span>`;
+    }
+    return escapeHtml(price);
   }
 
   function escapeHtml(str) {
