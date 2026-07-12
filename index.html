@@ -747,7 +747,31 @@
     results.innerHTML = "";
 
     try {
-      const data = await fetchEvents(keyword, startDate, endDate);
+      let data = await fetchEvents(keyword, startDate, endDate);
+      let resolvedFrom = null;
+
+      // If a literal search comes up empty, it might just be a partial or
+      // slightly-off name (e.g. "Olivia Rodri"). Ticketmaster's own suggest
+      // endpoint already does fuzzy artist/attraction matching for the
+      // autocomplete dropdown, so reuse it here as a "did you mean" fallback
+      // instead of trying to guess at fuzzy matching ourselves.
+      if ((!data.events || data.events.length === 0) && keyword.length >= 2) {
+        try {
+          const suggestRes = await fetch(`${AUTH_API}/suggestartists?keyword=${encodeURIComponent(keyword)}`);
+          const suggestData = await suggestRes.json();
+          const topSuggestion = (suggestData.suggestions || [])[0];
+
+          if (topSuggestion && topSuggestion.toLowerCase() !== keyword.toLowerCase()) {
+            const retryData = await fetchEvents(topSuggestion, startDate, endDate);
+            if (retryData.events && retryData.events.length > 0) {
+              data = retryData;
+              resolvedFrom = topSuggestion;
+            }
+          }
+        } catch (suggestErr) {
+          console.error('Suggestion fallback failed', suggestErr);
+        }
+      }
 
       if (!data.events || data.events.length === 0) {
         status.textContent = "";
@@ -773,6 +797,14 @@
 
       status.textContent = "";
 
+        if (resolvedFrom) {
+          const correctionNote = document.createElement('p');
+          correctionNote.className = 'status';
+          correctionNote.style.cssText = 'grid-column: 1 / -1; font-size: 0.85rem; font-style: italic; color: var(--muted); margin: 0 2px 6px;';
+          correctionNote.textContent = `Showing results for "${resolvedFrom}"`;
+          results.appendChild(correctionNote);
+        }
+
         const headerRow = document.createElement('div');
         headerRow.style.cssText = 'grid-column: 1 / -1; display:flex; justify-content:space-between; align-items:center; margin: 0 2px 4px;';
 
@@ -790,9 +822,9 @@
 
         const followBtn = document.createElement('button');
         followBtn.className = 'follow-btn';
-        followBtn.textContent = 'Follow ' + keyword;
-        followBtn.addEventListener('click', () => toggleFollowArtist(keyword, followBtn));
-        updateFollowButtonState(followBtn, keyword);
+        followBtn.textContent = 'Follow ' + data.keyword;
+        followBtn.addEventListener('click', () => toggleFollowArtist(data.keyword, followBtn));
+        updateFollowButtonState(followBtn, data.keyword);
 
         headerRow.appendChild(countLine);
         headerRow.appendChild(followBtn);
