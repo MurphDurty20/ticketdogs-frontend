@@ -49,6 +49,17 @@
     color: var(--ink);
   }
 
+  .sort-control label {
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .sort-control input[type="checkbox"] {
+    cursor: pointer;
+    vertical-align: middle;
+    margin-right: 3px;
+  }
+
   .row-list {
     display: flex;
     flex-direction: column;
@@ -165,7 +176,21 @@
   <div id="artistChips" class="artist-chip-row"></div>
   <p id="artistsEmpty" class="empty" style="display:none;">You're not following anyone yet. Search for an artist or team and hit "Follow" to see their shows here.</p>
 
-  <h2>Upcoming Shows from Artists You Follow</h2>
+  <div class="section-header">
+    <h2 style="margin-bottom:0;">Upcoming Shows from Artists You Follow</h2>
+    <span class="sort-control">
+      Sort by:
+      <select id="showsSort">
+        <option value="date">Upcoming date</option>
+        <option value="name">Name</option>
+        <option value="city">City</option>
+      </select>
+      <label style="margin-left:10px;">
+        <input type="checkbox" id="hideTributeCheckbox">
+        Hide tribute/cover acts
+      </label>
+    </span>
+  </div>
   <div id="artistShowsList" class="row-list"></div>
   <p id="artistShowsEmpty" class="empty" style="display:none;"></p>
 </main>
@@ -174,6 +199,8 @@
   const token = localStorage.getItem('sessionToken');
 
   let allFavorites = [];
+  let allArtistShows = [];
+  let followedArtistCount = 0;
 
   if (!token) {
     window.location.href = '/';
@@ -268,10 +295,7 @@
   }
 
   async function loadArtistShows() {
-    const showsList = document.getElementById('artistShowsList');
     const emptyEl = document.getElementById('artistShowsEmpty');
-    showsList.innerHTML = '';
-    emptyEl.style.display = 'none';
 
     try {
       const res = await fetch(`${API_URL}/getfollowedartistshows`, {
@@ -279,20 +303,64 @@
       });
       const data = await res.json();
 
-      if (!data.shows || data.shows.length === 0) {
-        emptyEl.textContent = data.artists && data.artists.length > 0
-          ? "No upcoming shows found for the artists you follow right now."
-          : "Follow an artist or team above to see their upcoming shows here.";
-        emptyEl.style.display = 'block';
-        return;
-      }
+      allArtistShows = data.shows || [];
+      followedArtistCount = (data.artists || []).length;
 
-      data.shows.forEach(ev => showsList.appendChild(buildRowCard(ev)));
+      renderArtistShows();
     } catch (err) {
       emptyEl.textContent = "Couldn't load shows right now.";
       emptyEl.style.display = 'block';
       console.error(err);
     }
+  }
+
+  function renderArtistShows() {
+    const showsList = document.getElementById('artistShowsList');
+    const emptyEl = document.getElementById('artistShowsEmpty');
+    showsList.innerHTML = '';
+    emptyEl.style.display = 'none';
+
+    const hideTribute = document.getElementById('hideTributeCheckbox').checked;
+    const sortBy = document.getElementById('showsSort').value;
+
+    let shows = [...allArtistShows];
+
+    if (hideTribute) {
+      shows = shows.filter(ev => !looksLikeTribute(ev.name));
+    }
+
+    if (sortBy === 'date') {
+      shows.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    } else if (sortBy === 'name') {
+      shows.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    } else if (sortBy === 'city') {
+      shows.sort((a, b) => (a.city || '').localeCompare(b.city || ''));
+    }
+
+    if (shows.length === 0) {
+      emptyEl.textContent = followedArtistCount > 0
+        ? "No upcoming shows found for the artists you follow right now."
+        : "Follow an artist or team above to see their upcoming shows here.";
+      emptyEl.style.display = 'block';
+      return;
+    }
+
+    shows.forEach(ev => showsList.appendChild(buildRowCard(ev)));
+  }
+
+  document.getElementById('showsSort').addEventListener('change', renderArtistShows);
+  document.getElementById('hideTributeCheckbox').addEventListener('change', renderArtistShows);
+
+  function looksLikeTribute(name) {
+    if (!name) return false;
+    const flags = [
+      'tribute', 'a salute to', 'the music of', 'cover band',
+      'ultimate ', 'experience -', ' experience:', 'reimagined',
+      'party:', 'themed night', 'dance party', 'silent disco',
+      'sing-along', 'trivia night', 'drag brunch'
+    ];
+    const lower = name.toLowerCase();
+    return flags.some(flag => lower.includes(flag));
   }
 
   async function loadFavorites() {
