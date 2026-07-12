@@ -13,6 +13,91 @@
   a.back { color: var(--amber-deep); text-decoration:none; font-size:0.9rem; }
   main { max-width: 780px; margin: 0 auto 80px; padding: 0 20px; }
 
+  #accountNavBar {
+    position: fixed;
+    top: 14px;
+    right: 20px;
+    font-size: 0.85rem;
+    color: var(--muted);
+    z-index: 200;
+    background: var(--paper);
+    padding: 4px 8px;
+    border-radius: 8px;
+  }
+
+  #accountNavBar #userEmail { color: var(--ink); }
+
+  #accountNavBar button {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    text-decoration: underline;
+    font-family: inherit;
+    font-size: inherit;
+  }
+
+  .profile-field {
+    margin-bottom: 14px;
+  }
+
+  .profile-field label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  .profile-field input[type="text"],
+  .profile-field select {
+    font-family: inherit;
+    font-size: 0.95rem;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px 10px;
+    background: var(--card);
+    color: var(--ink);
+    width: 100%;
+    max-width: 320px;
+    box-sizing: border-box;
+  }
+
+  .profile-field.checkbox-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .profile-field.checkbox-field label {
+    margin-bottom: 0;
+    color: var(--ink);
+    font-size: 0.95rem;
+    cursor: pointer;
+  }
+
+  #saveProfileBtn {
+    background: var(--amber-deep);
+    color: var(--paper);
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-weight: 600;
+    font-family: inherit;
+    font-size: 0.95rem;
+    margin-top: 6px;
+  }
+
+  #saveProfileBtn:hover { background: #a86813; }
+  #saveProfileBtn:disabled { background: var(--muted); cursor: default; }
+
+  #profileStatus {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-top: 8px;
+    min-height: 18px;
+  }
+
   h2 { font-size: 1.3rem; margin: 40px 0 12px; }
   h2:first-of-type { margin-top: 20px; }
 
@@ -149,14 +234,41 @@
 </style>
 </head>
 <body>
+<div id="accountNavBar">
+  Signed in as <span id="userEmail"></span> ·
+  <button id="logoutBtn">Sign out</button>
+</div>
 <header>
   <a href="/" class="back">← Back to search</a>
   <h1>My Account</h1>
 </header>
 <main>
-  <div style="text-align:center; margin: 10px 0 30px;">
-    Home city: <select id="citySelect"><option value="">Choose your city</option></select>
+  <h2 style="margin-top:20px;">Profile &amp; Preferences</h2>
+  <div class="profile-field">
+    <label for="displayName">Name</label>
+    <input type="text" id="displayName" placeholder="Your name" maxlength="100">
   </div>
+  <div class="profile-field">
+    <label for="citySelect">Home city</label>
+    <select id="citySelect"><option value="">Choose your city</option></select>
+  </div>
+  <div class="profile-field">
+    <label for="defaultCategorySelect">Default category filter</label>
+    <select id="defaultCategorySelect">
+      <option value="All">All</option>
+      <option value="Music">Music</option>
+      <option value="Sports">Sports</option>
+      <option value="Arts & Theatre">Arts & Theatre</option>
+      <option value="Family">Family</option>
+      <option value="Film">Film</option>
+    </select>
+  </div>
+  <div class="profile-field checkbox-field">
+    <input type="checkbox" id="hideTributeDefaultCheckbox">
+    <label for="hideTributeDefaultCheckbox">Hide tribute/cover acts by default</label>
+  </div>
+  <button id="saveProfileBtn">Save preferences</button>
+  <div id="profileStatus"></div>
 
   <div class="section-header">
     <h2 style="margin-bottom:0;">My Favorites</h2>
@@ -205,11 +317,68 @@
   if (!token) {
     window.location.href = '/';
   } else {
+    document.getElementById('userEmail').textContent = localStorage.getItem('userEmail') || '';
     loadFollowedArtists();
     loadArtistShows();
     loadFavorites();
-    loadCityOptions();
+    loadCityOptions().then(loadProfile);
   }
+
+  document.getElementById('logoutBtn').addEventListener('click', () => {
+    localStorage.removeItem('sessionToken');
+    localStorage.removeItem('userEmail');
+    window.location.href = '/';
+  });
+
+  async function loadProfile() {
+    try {
+      const res = await fetch(`${API_URL}/getprofile`, {
+        headers: { 'X-Session-Token': token }
+      });
+      const data = await res.json();
+      if (!res.ok) return;
+
+      document.getElementById('displayName').value = data.name || '';
+      if (data.homeCity) document.getElementById('citySelect').value = data.homeCity;
+      document.getElementById('defaultCategorySelect').value = data.defaultCategory || 'All';
+      document.getElementById('hideTributeDefaultCheckbox').checked = !!data.hideTributeDefault;
+    } catch (err) {
+      console.error('Failed to load profile', err);
+    }
+  }
+
+  document.getElementById('saveProfileBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('saveProfileBtn');
+    const statusEl = document.getElementById('profileStatus');
+    btn.disabled = true;
+    statusEl.textContent = 'Saving…';
+
+    try {
+      const res = await fetch(`${API_URL}/updateprofile`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Session-Token': token },
+        body: JSON.stringify({
+          name: document.getElementById('displayName').value.trim(),
+          defaultCategory: document.getElementById('defaultCategorySelect').value,
+          hideTributeDefault: document.getElementById('hideTributeDefaultCheckbox').checked
+        })
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        statusEl.textContent = data.error || 'Something went wrong saving your preferences.';
+        return;
+      }
+
+      statusEl.textContent = 'Saved.';
+      setTimeout(() => { statusEl.textContent = ''; }, 2500);
+    } catch (err) {
+      statusEl.textContent = 'Something went wrong. Please try again.';
+      console.error(err);
+    } finally {
+      btn.disabled = false;
+    }
+  });
 
   async function loadCityOptions() {
     const citySelect = document.getElementById('citySelect');
@@ -223,14 +392,6 @@
         opt.textContent = city;
         citySelect.appendChild(opt);
       });
-
-      const profileRes = await fetch(`${API_URL}/getprofile`, {
-        headers: { 'X-Session-Token': token }
-      });
-      const profileData = await profileRes.json();
-      if (profileRes.ok && profileData.homeCity) {
-        citySelect.value = profileData.homeCity;
-      }
     } catch (err) {
       console.error('Failed to load city options', err);
     }

@@ -287,19 +287,26 @@
 
   /* --- Auth bar + favorites --- */
   #authBar {
-    text-align: center;
-    padding: 10px 20px 20px;
-    font-size: 0.9rem;
+    position: fixed;
+    top: 14px;
+    right: 20px;
+    text-align: right;
+    font-size: 0.85rem;
+    z-index: 200;
+    background: var(--paper);
+    padding: 4px 8px;
+    border-radius: 8px;
   }
 
   #loginBtn {
     background: none;
     border: 1px solid var(--line);
     border-radius: 999px;
-    padding: 6px 16px;
+    padding: 6px 14px;
     cursor: pointer;
     color: var(--ink);
     font-family: inherit;
+    font-size: 0.85rem;
   }
 
   #authLoggedIn a { color: var(--amber-deep); }
@@ -401,6 +408,8 @@
     #results { grid-template-columns: 1fr; }
     header { padding: 36px 20px 26px; }
     .brand-logo { height: 56px; }
+    #authBar { font-size: 0.75rem; top: 8px; right: 10px; }
+    #authLoggedIn #userEmail { display: none; }
   }
 
     .follow-btn {
@@ -519,7 +528,7 @@
 
 <div id="authBar">
   <span id="authLoggedOut">
-    <button id="loginBtn">Sign in to save favorites</button>
+    <button id="loginBtn">Log In / Sign Up</button>
   </span>
   <span id="authLoggedIn" style="display:none;">
   Signed in as <span id="userEmail"></span> ·
@@ -1480,6 +1489,13 @@ async function loadUserProfile() {
     const data = await res.json();
     if (res.ok && data.homeCity) {
       currentUserCity = data.homeCity;
+    }
+    if (res.ok && data.defaultCategory) {
+      currentCategory = data.defaultCategory;
+      renderCategoryChips();
+    }
+    if (res.ok && data.hideTributeDefault) {
+      hideTributeCheckbox.checked = true;
     }
   } catch (err) {
     console.error('Failed to load profile', err);
