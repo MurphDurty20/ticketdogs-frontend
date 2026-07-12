@@ -460,7 +460,6 @@
   <div class="search-card" style="position:relative;">
   <div style="flex:1; position:relative;">
     <input type="text" id="keyword" placeholder="Search an artist, team, or show…" autocomplete="off" style="width:100%; box-sizing:border-box; border:2px solid var(--line); border-radius:8px; padding:14px 90px 14px 16px; font-size:1rem; outline:none; font-family:inherit;">
-    <span id="cityBadge" style="display:none; position:absolute; right:12px; top:50%; transform:translateY(-50%); background:var(--amber-deep); color:var(--paper); font-size:0.7rem; font-weight:700; letter-spacing:0.03em; padding:4px 8px; border-radius:999px; pointer-events:none;">📍 CITY</span>
     <div id="suggestDropdown" style="display:none; position:absolute; top:100%; left:0; right:0; background:var(--card); border:1px solid var(--line); border-radius:8px; margin-top:4px; box-shadow:0 8px 20px -8px rgba(20,23,31,0.3); z-index:10; overflow:hidden;"></div>
   </div>
   <button id="searchBtn">Search</button>
@@ -509,13 +508,6 @@
   "Cleveland", "Tampa", "St. Louis", "Pittsburgh", "Cincinnati",
   "Orlando", "New Orleans", "Salt Lake City"
 ];
-
-const cityBadge = document.getElementById('cityBadge');
-
-input.addEventListener('input', () => {
-  const isCity = MAJOR_CITIES.some(c => c.toLowerCase() === input.value.trim().toLowerCase());
-  cityBadge.style.display = isCity ? 'inline-block' : 'none';
-});
 
   const button = document.getElementById('searchBtn');
   const status = document.getElementById('status');
@@ -626,17 +618,31 @@ async function fetchSuggestions(query) {
     }
 
     suggestDropdown.innerHTML = '';
-    data.suggestions.forEach(name => {
-      const item = document.createElement('div');
-      item.className = 'suggest-item';
-      item.textContent = name;
-      item.addEventListener('click', () => {
-        input.value = name;
-        suggestDropdown.style.display = 'none';
-        runSearch();
-      });
-      suggestDropdown.appendChild(item);
-    });
+data.suggestions.forEach(name => {
+  const item = document.createElement('div');
+  item.className = 'suggest-item';
+  item.style.cssText = 'display:flex; justify-content:space-between; align-items:center;';
+
+  const isCity = MAJOR_CITIES.some(c => c.toLowerCase() === name.toLowerCase());
+
+  const label = document.createElement('span');
+  label.textContent = name;
+  item.appendChild(label);
+
+  if (isCity) {
+    const badge = document.createElement('span');
+    badge.textContent = '📍 CITY';
+    badge.style.cssText = 'background:var(--amber-deep); color:var(--paper); font-size:0.65rem; font-weight:700; letter-spacing:0.03em; padding:3px 7px; border-radius:999px; margin-left:10px; flex-shrink:0;';
+    item.appendChild(badge);
+  }
+
+  item.addEventListener('click', () => {
+    input.value = name;
+    suggestDropdown.style.display = 'none';
+    runSearch();
+  });
+  suggestDropdown.appendChild(item);
+});
 
     suggestDropdown.style.display = 'block';
   } catch (err) {
