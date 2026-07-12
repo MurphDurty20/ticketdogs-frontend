@@ -672,7 +672,7 @@
         status.textContent = "Updating results…";
 
         try {
-          const data = await fetchEvents(currentSearchTerm, dateFromInput.value || null, dateToInput.value || null, cat, 0);
+          const data = await fetchEvents(currentSearchTerm, dateFromInput.value || null, dateToInput.value || null, cat, 0, currentAttractionId);
           currentResults = data.events || [];
           resultsCurrentPage = data.page || 0;
           resultsTotalPages = data.totalPages || 1;
@@ -794,10 +794,10 @@
           resolvedFrom = cityMatch;
         } else {
           // The city guess didn't pan out — fall back to the literal search.
-          data = await fetchEvents(keyword, startDate, endDate);
+          data = await fetchEvents(keyword, startDate, endDate, null, 0, knownAttractionIds.get(lowerKeyword));
         }
       } else {
-        data = await fetchEvents(keyword, startDate, endDate);
+        data = await fetchEvents(keyword, startDate, endDate, null, 0, knownAttractionIds.get(lowerKeyword));
       }
 
       // If a literal search comes up empty, it might be a partial or
@@ -813,7 +813,7 @@
           const topSuggestion = (suggestData.suggestions || [])[0];
 
           if (topSuggestion && topSuggestion.toLowerCase() !== keyword.toLowerCase()) {
-            const retryData = await fetchEvents(topSuggestion, startDate, endDate);
+            const retryData = await fetchEvents(topSuggestion, startDate, endDate, null, 0, knownAttractionIds.get(topSuggestion.toLowerCase()));
             if (retryData.events && retryData.events.length > 0) {
               data = retryData;
               resolvedFrom = topSuggestion;
@@ -854,9 +854,10 @@
       // category into the resolution fetches would make a real city look
       // like "not found" just because it has zero events in that category.
       const resolvedTerm = resolvedFrom || data.keyword || keyword;
+      currentAttractionId = knownAttractionIds.get(resolvedTerm.toLowerCase()) || null;
       if (userDefaultCategory !== 'All') {
         try {
-          data = await fetchEvents(resolvedTerm, startDate, endDate, userDefaultCategory, 0);
+          data = await fetchEvents(resolvedTerm, startDate, endDate, userDefaultCategory, 0, currentAttractionId);
         } catch (categoryErr) {
           console.error('Category-filtered fetch failed, showing unfiltered results', categoryErr);
         }
@@ -1007,12 +1008,13 @@ document.addEventListener('click', (e) => {
 button.addEventListener('click', () => { suggestDropdown.style.display = 'none'; });
 input.addEventListener('keydown', e => { if (e.key === 'Enter') suggestDropdown.style.display = 'none'; });
 
-  async function fetchEvents(keyword, startDate, endDate, category, page) {
+  async function fetchEvents(keyword, startDate, endDate, category, page, attractionId) {
     let url = `${API_URL}?keyword=${encodeURIComponent(keyword)}`;
     if (startDate) url += `&startDate=${encodeURIComponent(startDate)}`;
     if (endDate) url += `&endDate=${encodeURIComponent(endDate)}`;
     if (category && category !== 'All') url += `&category=${encodeURIComponent(category)}`;
     if (page) url += `&page=${page}`;
+    if (attractionId) url += `&attractionId=${encodeURIComponent(attractionId)}`;
     const res = await fetch(url);
     const data = await res.json();
     if (!res.ok) {
@@ -1266,6 +1268,7 @@ let resultsCurrentPage = 0;
 let resultsTotalPages = 1;
 let currentSearchTerm = null;
 let currentSearchIsCity = false;
+let currentAttractionId = null;
 let isFetchingMorePage = false;
 
 function buildRowCard(ev) {
@@ -1320,7 +1323,7 @@ async function fetchNextResultsPage() {
   }
 
   try {
-    const data = await fetchEvents(currentSearchTerm, dateFromInput.value || null, dateToInput.value || null, currentCategory, nextPage);
+    const data = await fetchEvents(currentSearchTerm, dateFromInput.value || null, dateToInput.value || null, currentCategory, nextPage, currentAttractionId);
 
     if (data.events) {
       // Guard against duplicates in case a page overlaps with what we already have.
