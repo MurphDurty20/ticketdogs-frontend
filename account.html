@@ -269,7 +269,7 @@ async function loadCityOptions() {
           <p class="event-name">${escapeHtml(fav.name)}</p>
           <div class="event-meta">${escapeHtml(fav.date)}<br>${escapeHtml(fav.venue)}${fav.city ? ', ' + escapeHtml(fav.city) : ''}</div>
         </div>
-        <div class="event-price">${escapeHtml(fav.price || '')}</div>
+        <div class="event-price">${formatPrice(fav.price, fav.source)}</div>
       </a>
     `;
 
