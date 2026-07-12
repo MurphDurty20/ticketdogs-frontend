@@ -343,6 +343,8 @@
       if (data.homeCity) document.getElementById('citySelect').value = data.homeCity;
       document.getElementById('defaultCategorySelect').value = data.defaultCategory || 'All';
       document.getElementById('hideTributeDefaultCheckbox').checked = !!data.hideTributeDefault;
+      document.getElementById('hideTributeCheckbox').checked = !!data.hideTributeDefault;
+      renderArtistShows();
     } catch (err) {
       console.error('Failed to load profile', err);
     }
