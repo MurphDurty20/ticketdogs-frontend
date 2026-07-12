@@ -571,6 +571,13 @@
 
 <div id="categoryRow" style="display:none; align-items:center; justify-content:center; flex-wrap:wrap; gap:8px; margin-top:10px;"></div>
 
+<div id="hideTributeRow" style="display:none; align-items:center; justify-content:center; gap:6px; margin-top:8px; font-size:0.85rem; color:var(--muted);">
+  <label style="cursor:pointer; user-select:none;">
+    <input type="checkbox" id="hideTributeCheckbox" style="cursor:pointer; vertical-align:middle; margin-right:4px;">
+    Hide tribute/cover acts
+  </label>
+</div>
+
 <div style="text-align:center; margin-top:8px;">
   <button id="useLocationBtn" style="background:none; border:none; color:var(--muted); cursor:pointer; font-size:0.85rem; text-decoration:underline; font-family:inherit;">📍 Use my location</button>
 </div>
@@ -622,6 +629,8 @@
   const dateToInput = document.getElementById('dateTo');
   const clearDatesBtn = document.getElementById('clearDatesBtn');
   const categoryRow = document.getElementById('categoryRow');
+  const hideTributeRow = document.getElementById('hideTributeRow');
+  const hideTributeCheckbox = document.getElementById('hideTributeCheckbox');
 
   // Ticketmaster's top-level "segment" classifications. "All" is our own
   // addition to mean "no filter".
@@ -654,14 +663,20 @@
   renderCategoryChips();
 
   // The calendar icon is always available so dates can be picked before
-  // typing a search term. Category chips only make sense once there's a
-  // query to filter, so those still wait for input.
+  // typing a search term. Category chips and the tribute toggle only make
+  // sense once there's a query to filter, so those still wait for input.
   function updateDateRangeVisibility() {
     const hasQuery = input.value.trim().length > 0;
     categoryRow.style.display = hasQuery ? 'flex' : 'none';
+    hideTributeRow.style.display = hasQuery ? 'flex' : 'none';
   }
 
   input.addEventListener('input', updateDateRangeVisibility);
+
+  hideTributeCheckbox.addEventListener('change', () => {
+    resultsDisplayCount = 10;
+    renderResultsList();
+  });
 
   dateIconBtn.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -1236,18 +1251,19 @@ function renderResultsList() {
   const listEl = document.getElementById('resultsList');
   if (!listEl) return;
 
-  const filtered = currentCategory === "All"
+  let visible = currentCategory === "All"
     ? currentResults
     : currentResults.filter(ev => ev.category === currentCategory);
 
-  // Sort real acts before tribute/themed acts across the FULL combined
-  // list (not just within a single fetched page), since appending later
-  // pages onto currentResults can otherwise put an earlier page's tribute
-  // acts ahead of a later page's real event.
-  const sorted = [...filtered].sort((a, b) => looksLikeTribute(a.name) - looksLikeTribute(b.name));
+  // Either tribute/cover acts are shown in normal chronological order along
+  // with everything else, or they're hidden entirely — no more sorting them
+  // to the bottom, since that's a middle ground nobody asked for.
+  if (hideTributeCheckbox.checked) {
+    visible = visible.filter(ev => !looksLikeTribute(ev.name));
+  }
 
   listEl.innerHTML = '';
-  const toShow = sorted.slice(0, resultsDisplayCount);
+  const toShow = visible.slice(0, resultsDisplayCount);
   toShow.forEach(ev => listEl.appendChild(buildRowCard(ev)));
 
   const existingBtn = document.getElementById('loadMoreBtn');
@@ -1255,7 +1271,7 @@ function renderResultsList() {
 
   const hasMorePages = (resultsCurrentPage + 1) < resultsTotalPages;
 
-  if (sorted.length === 0) {
+  if (visible.length === 0) {
     const emptyMsg = document.createElement('p');
     emptyMsg.className = 'status';
     emptyMsg.style.textAlign = 'center';
@@ -1270,11 +1286,11 @@ function renderResultsList() {
     return;
   }
 
-  if (resultsDisplayCount < sorted.length) {
+  if (resultsDisplayCount < visible.length) {
     // We already have enough matching results fetched to fill the next page.
     const loadMoreBtn = document.createElement('button');
     loadMoreBtn.id = 'loadMoreBtn';
-    loadMoreBtn.textContent = `Load more (${sorted.length - resultsDisplayCount} remaining)`;
+    loadMoreBtn.textContent = `Load more (${visible.length - resultsDisplayCount} remaining)`;
     loadMoreBtn.addEventListener('click', () => {
       resultsDisplayCount += 10;
       renderResultsList();
