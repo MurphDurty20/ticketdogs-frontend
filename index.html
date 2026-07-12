@@ -268,6 +268,16 @@
     color: var(--amber-deep);
   }
 
+  .suggest-item {
+  padding: 10px 16px;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.suggest-item:hover {
+  background: var(--paper);
+}
+
   footer {
     text-align: center;
     color: var(--muted);
@@ -447,8 +457,11 @@
 </div>
 
 <main>
-  <div class="search-card">
-    <input type="text" id="keyword" placeholder="Search an artist, team, or show…" autocomplete="off">
+  <div class="search-card" style="position:relative;">
+    <div style="flex:1; position:relative;">
+      <input type="text" id="keyword" placeholder="Search an artist, team, or show…" autocomplete="off" style="width:100%; box-sizing:border-box; border:2px solid var(--line); border-radius:8px; padding:14px 16px; font-size:1rem; outline:none; font-family:inherit;">
+      <div id="suggestDropdown" style="display:none; position:absolute; top:100%; left:0; right:0; background:var(--card); border:1px solid var(--line); border-radius:8px; margin-top:4px; box-shadow:0 8px 20px -8px rgba(20,23,31,0.3); z-index:10; overflow:hidden;"></div>
+    </div>
     <button id="searchBtn">Search</button>
   </div>
 
@@ -558,6 +571,61 @@
       button.textContent = "Search";
     }
   }
+
+  let suggestTimeout = null;
+const suggestDropdown = document.getElementById('suggestDropdown');
+
+input.addEventListener('input', () => {
+  clearTimeout(suggestTimeout);
+  const query = input.value.trim();
+
+  if (query.length < 2) {
+    suggestDropdown.style.display = 'none';
+    return;
+  }
+
+  suggestTimeout = setTimeout(() => fetchSuggestions(query), 250);
+});
+
+async function fetchSuggestions(query) {
+  try {
+    const res = await fetch(`${AUTH_API}/suggestartists?keyword=${encodeURIComponent(query)}`);
+    const data = await res.json();
+
+    if (!data.suggestions || data.suggestions.length === 0) {
+      suggestDropdown.style.display = 'none';
+      return;
+    }
+
+    suggestDropdown.innerHTML = '';
+    data.suggestions.forEach(name => {
+      const item = document.createElement('div');
+      item.className = 'suggest-item';
+      item.textContent = name;
+      item.addEventListener('click', () => {
+        input.value = name;
+        suggestDropdown.style.display = 'none';
+        runSearch();
+      });
+      suggestDropdown.appendChild(item);
+    });
+
+    suggestDropdown.style.display = 'block';
+  } catch (err) {
+    console.error('Failed to load suggestions', err);
+    suggestDropdown.style.display = 'none';
+  }
+}
+
+// Hide dropdown when clicking elsewhere, or when Enter/Search runs a real search
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.search-card')) {
+    suggestDropdown.style.display = 'none';
+  }
+});
+
+button.addEventListener('click', () => { suggestDropdown.style.display = 'none'; });
+input.addEventListener('keydown', e => { if (e.key === 'Enter') suggestDropdown.style.display = 'none'; });
 
   async function fetchEvents(keyword) {
     const res = await fetch(`${API_URL}?keyword=${encodeURIComponent(keyword)}`);
