@@ -557,6 +557,14 @@
   <button id="searchBtn">Search</button>
 </div>
 
+<div id="dateRangeRow" style="display:none; align-items:center; justify-content:center; gap:8px; margin-top:10px; font-size:0.85rem; color:var(--muted);">
+  <label for="dateFrom">Dates:</label>
+  <input type="date" id="dateFrom" style="font-family:inherit; font-size:0.85rem; border:1px solid var(--line); border-radius:6px; padding:4px 6px; background:var(--card); color:var(--ink);">
+  <span>to</span>
+  <input type="date" id="dateTo" style="font-family:inherit; font-size:0.85rem; border:1px solid var(--line); border-radius:6px; padding:4px 6px; background:var(--card); color:var(--ink);">
+  <button id="clearDatesBtn" type="button" style="background:none; border:none; color:var(--muted); cursor:pointer; font-size:0.8rem; text-decoration:underline; font-family:inherit; display:none;">Clear</button>
+</div>
+
   <div id="suggestions" class="suggestions"></div>
 <div style="text-align:center; margin-top:8px;">
   <button id="useLocationBtn" style="background:none; border:none; color:var(--muted); cursor:pointer; font-size:0.85rem; text-decoration:underline; font-family:inherit;">📍 Use my location</button>
@@ -604,6 +612,32 @@
   const button = document.getElementById('searchBtn');
   const status = document.getElementById('status');
   const results = document.getElementById('results');
+  const dateRangeRow = document.getElementById('dateRangeRow');
+  const dateFromInput = document.getElementById('dateFrom');
+  const dateToInput = document.getElementById('dateTo');
+  const clearDatesBtn = document.getElementById('clearDatesBtn');
+
+  // The date range picker only makes sense for city searches, so show it
+  // once the typed text matches a known city and hide it otherwise.
+  function updateDateRangeVisibility() {
+    const isCity = MAJOR_CITIES.some(c => c.toLowerCase() === input.value.trim().toLowerCase());
+    dateRangeRow.style.display = isCity ? 'flex' : 'none';
+  }
+
+  input.addEventListener('input', updateDateRangeVisibility);
+
+  clearDatesBtn.addEventListener('click', () => {
+    dateFromInput.value = '';
+    dateToInput.value = '';
+    clearDatesBtn.style.display = 'none';
+  });
+
+  function updateClearDatesVisibility() {
+    clearDatesBtn.style.display = (dateFromInput.value || dateToInput.value) ? 'inline' : 'none';
+  }
+
+  dateFromInput.addEventListener('change', updateClearDatesVisibility);
+  dateToInput.addEventListener('change', updateClearDatesVisibility);
 
   async function runSearch() {
     const keyword = input.value.trim();
@@ -614,6 +648,15 @@
       return;
     }
 
+    const startDate = dateFromInput.value || null;
+    const endDate = dateToInput.value || null;
+
+    if (startDate && endDate && endDate < startDate) {
+      status.textContent = "Your end date is before your start date. Please fix the date range.";
+      status.className = "status error";
+      return;
+    }
+
     button.disabled = true;
     button.textContent = "Searching…";
     status.className = "status";
@@ -621,7 +664,7 @@
     results.innerHTML = "";
 
     try {
-      const data = await fetchEvents(keyword);
+      const data = await fetchEvents(keyword, startDate, endDate);
 
       if (!data.events || data.events.length === 0) {
         status.textContent = "";
@@ -755,6 +798,7 @@ async function fetchSuggestions(query) {
 
   item.addEventListener('click', () => {
     input.value = name;
+    updateDateRangeVisibility();
     suggestDropdown.style.display = 'none';
     runSearch();
   });
@@ -778,8 +822,11 @@ document.addEventListener('click', (e) => {
 button.addEventListener('click', () => { suggestDropdown.style.display = 'none'; });
 input.addEventListener('keydown', e => { if (e.key === 'Enter') suggestDropdown.style.display = 'none'; });
 
-  async function fetchEvents(keyword) {
-    const res = await fetch(`${API_URL}?keyword=${encodeURIComponent(keyword)}`);
+  async function fetchEvents(keyword, startDate, endDate) {
+    let url = `${API_URL}?keyword=${encodeURIComponent(keyword)}`;
+    if (startDate) url += `&startDate=${encodeURIComponent(startDate)}`;
+    if (endDate) url += `&endDate=${encodeURIComponent(endDate)}`;
+    const res = await fetch(url);
     const data = await res.json();
     if (!res.ok) {
       throw new Error(data.error || `Server responded with ${res.status}`);
