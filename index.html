@@ -660,10 +660,29 @@
         chip.style.color = 'var(--paper)';
         chip.style.borderColor = 'var(--amber-deep)';
       }
-      chip.addEventListener('click', () => {
+      chip.addEventListener('click', async () => {
+        if (cat === currentCategory) return;
         currentCategory = cat;
         renderCategoryChips();
+
+        if (!currentSearchTerm) return;
+
         resultsDisplayCount = 25;
+        status.className = "status";
+        status.textContent = "Updating results…";
+
+        try {
+          const data = await fetchEvents(currentSearchTerm, dateFromInput.value || null, dateToInput.value || null, cat, 0);
+          currentResults = data.events || [];
+          resultsCurrentPage = data.page || 0;
+          resultsTotalPages = data.totalPages || 1;
+          status.textContent = "";
+        } catch (err) {
+          console.error('Failed to refetch for category change', err);
+          status.className = "status error";
+          status.textContent = "Something went wrong updating the category filter.";
+        }
+
         renderResultsList();
       });
       categoryRow.appendChild(chip);
@@ -826,6 +845,22 @@
         return;
       }
 
+      // The term is resolved and confirmed to have events. NOW apply the
+      // category filter server-side (if one is active), so the actual
+      // first page of results Ticketmaster sends back is already filtered
+      // rather than us filtering a generic pull client-side afterward.
+      // This is deliberately a separate step from resolution above — mixing
+      // category into the resolution fetches would make a real city look
+      // like "not found" just because it has zero events in that category.
+      const resolvedTerm = resolvedFrom || data.keyword || keyword;
+      if (userDefaultCategory !== 'All') {
+        try {
+          data = await fetchEvents(resolvedTerm, startDate, endDate, userDefaultCategory, 0);
+        } catch (categoryErr) {
+          console.error('Category-filtered fetch failed, showing unfiltered results', categoryErr);
+        }
+      }
+
       status.textContent = "";
 
         if (resolvedFrom) {
@@ -842,7 +877,7 @@
         const countLine = document.createElement('p');
         countLine.className = 'result-count';
         countLine.style.margin = '0';
-        countLine.textContent = `${data.count} result${data.count === 1 ? '' : 's'} for "${data.keyword}"`;
+        countLine.textContent = `${data.count} result${data.count === 1 ? '' : 's'} for "${resolvedTerm}"`;
 
         if (data.isCitySearch) {
           const cityTag = document.createElement('span');
@@ -853,19 +888,19 @@
 
         const followBtn = document.createElement('button');
         followBtn.className = 'follow-btn';
-        followBtn.textContent = 'Follow ' + data.keyword;
-        followBtn.addEventListener('click', () => toggleFollowArtist(data.keyword, followBtn));
-        updateFollowButtonState(followBtn, data.keyword);
+        followBtn.textContent = 'Follow ' + resolvedTerm;
+        followBtn.addEventListener('click', () => toggleFollowArtist(resolvedTerm, followBtn));
+        updateFollowButtonState(followBtn, resolvedTerm);
 
         headerRow.appendChild(countLine);
         headerRow.appendChild(followBtn);
         results.appendChild(headerRow);
 
-        currentResults = data.events;
+        currentResults = data.events || [];
         resultsDisplayCount = 25;
         currentCategory = userDefaultCategory;
         renderCategoryChips();
-        currentSearchTerm = data.keyword;
+        currentSearchTerm = resolvedTerm;
         currentSearchIsCity = !!data.isCitySearch;
         resultsCurrentPage = data.page || 0;
         resultsTotalPages = data.totalPages || 1;
@@ -970,10 +1005,12 @@ document.addEventListener('click', (e) => {
 button.addEventListener('click', () => { suggestDropdown.style.display = 'none'; });
 input.addEventListener('keydown', e => { if (e.key === 'Enter') suggestDropdown.style.display = 'none'; });
 
-  async function fetchEvents(keyword, startDate, endDate) {
+  async function fetchEvents(keyword, startDate, endDate, category, page) {
     let url = `${API_URL}?keyword=${encodeURIComponent(keyword)}`;
     if (startDate) url += `&startDate=${encodeURIComponent(startDate)}`;
     if (endDate) url += `&endDate=${encodeURIComponent(endDate)}`;
+    if (category && category !== 'All') url += `&category=${encodeURIComponent(category)}`;
+    if (page) url += `&page=${page}`;
     const res = await fetch(url);
     const data = await res.json();
     if (!res.ok) {
@@ -1281,19 +1318,9 @@ async function fetchNextResultsPage() {
   }
 
   try {
-    let url;
-    if (currentSearchIsCity) {
-      url = `${AUTH_API}/searcheventsbycity?city=${encodeURIComponent(currentSearchTerm)}&page=${nextPage}`;
-    } else {
-      url = `${API_URL}?keyword=${encodeURIComponent(currentSearchTerm)}&page=${nextPage}`;
-    }
-    if (dateFromInput.value) url += `&startDate=${encodeURIComponent(dateFromInput.value)}`;
-    if (dateToInput.value) url += `&endDate=${encodeURIComponent(dateToInput.value)}`;
+    const data = await fetchEvents(currentSearchTerm, dateFromInput.value || null, dateToInput.value || null, currentCategory, nextPage);
 
-    const res = await fetch(url);
-    const data = await res.json();
-
-    if (res.ok && data.events) {
+    if (data.events) {
       // Guard against duplicates in case a page overlaps with what we already have.
       const seenKeys = new Set(currentResults.map(ev => `${ev.name}|${ev.date}|${ev.venue}`));
       const newEvents = data.events.filter(ev => !seenKeys.has(`${ev.name}|${ev.date}|${ev.venue}`));
@@ -1314,9 +1341,11 @@ function renderResultsList() {
   const listEl = document.getElementById('resultsList');
   if (!listEl) return;
 
-  let visible = currentCategory === "All"
-    ? currentResults
-    : currentResults.filter(ev => ev.category === currentCategory);
+  // Category filtering now happens server-side (Ticketmaster's own
+  // classificationName filter), so currentResults should already match
+  // currentCategory. Only the tribute/cover-act toggle still needs to be
+  // applied client-side, since Ticketmaster has no equivalent filter for it.
+  let visible = currentResults;
 
   // Either tribute/cover acts are shown in normal chronological order along
   // with everything else, or they're hidden entirely — no more sorting them
