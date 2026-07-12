@@ -663,7 +663,7 @@
       chip.addEventListener('click', () => {
         currentCategory = cat;
         renderCategoryChips();
-        resultsDisplayCount = 10;
+        resultsDisplayCount = 25;
         renderResultsList();
       });
       categoryRow.appendChild(chip);
@@ -684,7 +684,7 @@
   input.addEventListener('input', updateDateRangeVisibility);
 
   hideTributeCheckbox.addEventListener('change', () => {
-    resultsDisplayCount = 10;
+    resultsDisplayCount = 25;
     renderResultsList();
   });
 
@@ -862,7 +862,7 @@
         results.appendChild(headerRow);
 
         currentResults = data.events;
-        resultsDisplayCount = 10;
+        resultsDisplayCount = 25;
         currentCategory = userDefaultCategory;
         renderCategoryChips();
         currentSearchTerm = data.keyword;
@@ -1222,7 +1222,7 @@ async function loadCityShows(city) {
   }
 
   let currentResults = [];
-let resultsDisplayCount = 10;
+let resultsDisplayCount = 25;
 let resultsCurrentPage = 0;
 let resultsTotalPages = 1;
 let currentSearchTerm = null;
@@ -1305,7 +1305,7 @@ async function fetchNextResultsPage() {
     console.error('Failed to fetch additional results page', err);
   } finally {
     isFetchingMorePage = false;
-    resultsDisplayCount += 10;
+    resultsDisplayCount += 25;
     renderResultsList();
   }
 }
@@ -1355,7 +1355,7 @@ function renderResultsList() {
     loadMoreBtn.id = 'loadMoreBtn';
     loadMoreBtn.textContent = `Load more (${visible.length - resultsDisplayCount} remaining)`;
     loadMoreBtn.addEventListener('click', () => {
-      resultsDisplayCount += 10;
+      resultsDisplayCount += 25;
       renderResultsList();
     });
     results.appendChild(loadMoreBtn);
