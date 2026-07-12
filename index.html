@@ -757,30 +757,35 @@
     results.innerHTML = "";
 
     try {
-      let data = await fetchEvents(keyword, startDate, endDate);
+      let data;
       let resolvedFrom = null;
 
-      // If a literal search comes up empty, it might just be a partial
-      // city name (e.g. "cin") or a partial artist name (e.g. "Olivia
-      // Rodri"). Check for a matching city first, using the same prefix
-      // logic the autocomplete dropdown already uses — it's free and
-      // instant since it doesn't need an API call. Only fall back to
-      // Ticketmaster's fuzzy artist/attraction suggest endpoint if that
-      // doesn't turn up anything, since that endpoint doesn't know about
-      // city names.
-      if ((!data.events || data.events.length === 0) && keyword.length >= 2) {
-        const lowerKeyword = keyword.toLowerCase();
-        const cityMatch = MAJOR_CITIES.find(c => c.toLowerCase().startsWith(lowerKeyword));
+      // Partial city names (e.g. "cin") should behave the same as clicking
+      // the matching autocomplete suggestion would — resolve to the full
+      // city BEFORE running a literal search. Waiting to see if the literal
+      // search comes back empty doesn't work here, since a short fragment
+      // can coincidentally match an unrelated event/venue name (e.g. "cin"
+      // matching "Cin City Burlesque"), which means it's never truly empty.
+      const lowerKeyword = keyword.toLowerCase();
+      const cityMatch = MAJOR_CITIES.find(c => c.toLowerCase().startsWith(lowerKeyword));
 
-        if (cityMatch && cityMatch.toLowerCase() !== lowerKeyword) {
-          const retryData = await fetchEvents(cityMatch, startDate, endDate);
-          if (retryData.events && retryData.events.length > 0) {
-            data = retryData;
-            resolvedFrom = cityMatch;
-          }
+      if (cityMatch && cityMatch.toLowerCase() !== lowerKeyword) {
+        data = await fetchEvents(cityMatch, startDate, endDate);
+        if (data.events && data.events.length > 0) {
+          resolvedFrom = cityMatch;
+        } else {
+          // The city guess didn't pan out — fall back to the literal search.
+          data = await fetchEvents(keyword, startDate, endDate);
         }
+      } else {
+        data = await fetchEvents(keyword, startDate, endDate);
       }
 
+      // If a literal search comes up empty, it might be a partial or
+      // slightly-off artist name (e.g. "Olivia Rodri"). Ticketmaster's own
+      // suggest endpoint already does fuzzy artist/attraction matching for
+      // the autocomplete dropdown, so reuse it here as a "did you mean"
+      // fallback instead of trying to guess at fuzzy matching ourselves.
       if ((!data.events || data.events.length === 0) && keyword.length >= 2) {
         try {
           const suggestRes = await fetch(`${AUTH_API}/suggestartists?keyword=${encodeURIComponent(keyword)}`);
