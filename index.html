@@ -645,6 +645,7 @@
   // addition to mean "no filter".
   const CATEGORIES = ["All", "Music", "Sports", "Arts & Theatre", "Family", "Film"];
   let currentCategory = "All";
+  let userDefaultCategory = "All";
 
   function renderCategoryChips() {
     categoryRow.innerHTML = '';
@@ -841,7 +842,7 @@
 
         currentResults = data.events;
         resultsDisplayCount = 10;
-        currentCategory = "All";
+        currentCategory = userDefaultCategory;
         renderCategoryChips();
         currentSearchTerm = data.keyword;
         currentSearchIsCity = !!data.isCitySearch;
@@ -1493,6 +1494,7 @@ async function loadUserProfile() {
       currentUserCity = data.homeCity;
     }
     if (res.ok && data.defaultCategory) {
+      userDefaultCategory = data.defaultCategory;
       currentCategory = data.defaultCategory;
       renderCategoryChips();
     }
