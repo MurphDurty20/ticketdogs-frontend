@@ -751,6 +751,9 @@
           citySearchDisplayCount = 10;
           currentCategory = "All";
           renderCategoryChips();
+          currentSearchCity = data.keyword;
+          cityCurrentPage = data.page || 0;
+          cityTotalPages = data.totalPages || 1;
 
           const listEl = document.createElement('div');
           listEl.id = 'cityResultsList';
@@ -1106,6 +1109,10 @@ async function loadCityShows(city) {
 
   let currentCityResults = [];
 let citySearchDisplayCount = 10;
+let cityCurrentPage = 0;
+let cityTotalPages = 1;
+let currentSearchCity = null;
+let isFetchingMorePage = false;
 
 function buildRowCard(ev) {
   const card = document.createElement('div');
@@ -1146,6 +1153,43 @@ function buildRowCard(ev) {
   return card;
 }
 
+async function fetchNextCityPage() {
+  if (!currentSearchCity || isFetchingMorePage) return;
+  const nextPage = cityCurrentPage + 1;
+  if (nextPage >= cityTotalPages) return;
+
+  isFetchingMorePage = true;
+  const btn = document.getElementById('loadMoreBtn');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Loading more…';
+  }
+
+  try {
+    let url = `${AUTH_API}/searcheventsbycity?city=${encodeURIComponent(currentSearchCity)}&page=${nextPage}`;
+    if (dateFromInput.value) url += `&startDate=${encodeURIComponent(dateFromInput.value)}`;
+    if (dateToInput.value) url += `&endDate=${encodeURIComponent(dateToInput.value)}`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (res.ok && data.events) {
+      // Guard against duplicates in case a page overlaps with what we already have.
+      const seenKeys = new Set(currentCityResults.map(ev => `${ev.name}|${ev.date}|${ev.venue}`));
+      const newEvents = data.events.filter(ev => !seenKeys.has(`${ev.name}|${ev.date}|${ev.venue}`));
+      currentCityResults = currentCityResults.concat(newEvents);
+      cityCurrentPage = data.page;
+      cityTotalPages = data.totalPages;
+    }
+  } catch (err) {
+    console.error('Failed to fetch additional results page', err);
+  } finally {
+    isFetchingMorePage = false;
+    citySearchDisplayCount += 10;
+    renderCityResults();
+  }
+}
+
 function renderCityResults() {
   const listEl = document.getElementById('cityResultsList');
   if (!listEl) return;
@@ -1161,16 +1205,25 @@ function renderCityResults() {
   const existingBtn = document.getElementById('loadMoreBtn');
   if (existingBtn) existingBtn.remove();
 
+  const hasMorePages = (cityCurrentPage + 1) < cityTotalPages;
+
   if (filtered.length === 0) {
     const emptyMsg = document.createElement('p');
     emptyMsg.className = 'status';
     emptyMsg.style.textAlign = 'center';
-    emptyMsg.textContent = `No ${currentCategory.toLowerCase()} events found in this range.`;
+    emptyMsg.textContent = hasMorePages
+      ? `No ${currentCategory.toLowerCase()} events in what we've fetched so far — checking for more…`
+      : `No ${currentCategory.toLowerCase()} events found in this range.`;
     listEl.appendChild(emptyMsg);
+
+    if (hasMorePages) {
+      fetchNextCityPage();
+    }
     return;
   }
 
   if (citySearchDisplayCount < filtered.length) {
+    // We already have enough matching results fetched to fill the next page.
     const loadMoreBtn = document.createElement('button');
     loadMoreBtn.id = 'loadMoreBtn';
     loadMoreBtn.textContent = `Load more (${filtered.length - citySearchDisplayCount} remaining)`;
@@ -1178,6 +1231,14 @@ function renderCityResults() {
       citySearchDisplayCount += 10;
       renderCityResults();
     });
+    results.appendChild(loadMoreBtn);
+  } else if (hasMorePages) {
+    // We've shown everything we have that matches the filter, but Ticketmaster
+    // has more pages of results that haven't been checked yet.
+    const loadMoreBtn = document.createElement('button');
+    loadMoreBtn.id = 'loadMoreBtn';
+    loadMoreBtn.textContent = 'Load more';
+    loadMoreBtn.addEventListener('click', fetchNextCityPage);
     results.appendChild(loadMoreBtn);
   }
 }
