@@ -458,12 +458,13 @@
 
 <main>
   <div class="search-card" style="position:relative;">
-    <div style="flex:1; position:relative;">
-      <input type="text" id="keyword" placeholder="Search an artist, team, or show…" autocomplete="off" style="width:100%; box-sizing:border-box; border:2px solid var(--line); border-radius:8px; padding:14px 16px; font-size:1rem; outline:none; font-family:inherit;">
-      <div id="suggestDropdown" style="display:none; position:absolute; top:100%; left:0; right:0; background:var(--card); border:1px solid var(--line); border-radius:8px; margin-top:4px; box-shadow:0 8px 20px -8px rgba(20,23,31,0.3); z-index:10; overflow:hidden;"></div>
-    </div>
-    <button id="searchBtn">Search</button>
+  <div style="flex:1; position:relative;">
+    <input type="text" id="keyword" placeholder="Search an artist, team, or show…" autocomplete="off" style="width:100%; box-sizing:border-box; border:2px solid var(--line); border-radius:8px; padding:14px 90px 14px 16px; font-size:1rem; outline:none; font-family:inherit;">
+    <span id="cityBadge" style="display:none; position:absolute; right:12px; top:50%; transform:translateY(-50%); background:var(--amber-deep); color:var(--paper); font-size:0.7rem; font-weight:700; letter-spacing:0.03em; padding:4px 8px; border-radius:999px; pointer-events:none;">📍 CITY</span>
+    <div id="suggestDropdown" style="display:none; position:absolute; top:100%; left:0; right:0; background:var(--card); border:1px solid var(--line); border-radius:8px; margin-top:4px; box-shadow:0 8px 20px -8px rgba(20,23,31,0.3); z-index:10; overflow:hidden;"></div>
   </div>
+  <button id="searchBtn">Search</button>
+</div>
 
   <div id="suggestions" class="suggestions"></div>
 <div style="text-align:center; margin-top:8px;">
@@ -496,6 +497,26 @@
     "Bad Bunny",
     "Ed Sheeran"
   ];
+  const MAJOR_CITIES = [
+  "New York", "Los Angeles", "Chicago", "Houston", "Phoenix",
+  "Philadelphia", "San Antonio", "San Diego", "Dallas", "Austin",
+  "Jacksonville", "Fort Worth", "San Jose", "Columbus", "Charlotte",
+  "Indianapolis", "San Francisco", "Seattle", "Denver", "Nashville",
+  "Oklahoma City", "El Paso", "Boston", "Portland", "Las Vegas",
+  "Detroit", "Memphis", "Louisville", "Milwaukee", "Baltimore",
+  "Albuquerque", "Tucson", "Fresno", "Sacramento", "Kansas City",
+  "Atlanta", "Miami", "Raleigh", "Omaha", "Minneapolis",
+  "Cleveland", "Tampa", "St. Louis", "Pittsburgh", "Cincinnati",
+  "Orlando", "New Orleans", "Salt Lake City"
+];
+
+const cityBadge = document.getElementById('cityBadge');
+
+input.addEventListener('input', () => {
+  const isCity = MAJOR_CITIES.some(c => c.toLowerCase() === input.value.trim().toLowerCase());
+  cityBadge.style.display = isCity ? 'inline-block' : 'none';
+});
+
   const button = document.getElementById('searchBtn');
   const status = document.getElementById('status');
   const results = document.getElementById('results');
