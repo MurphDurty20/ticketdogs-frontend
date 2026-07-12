@@ -13,6 +13,90 @@
   a.back { color: var(--amber-deep); text-decoration:none; font-size:0.9rem; }
   main { max-width: 780px; margin: 0 auto 80px; padding: 0 20px; }
 
+  /* --- Inline search (ported from homepage) --- */
+  .search-card {
+    background: var(--card);
+    border-radius: 14px;
+    box-shadow: 0 12px 30px -12px rgba(20, 23, 31, 0.35);
+    padding: 22px;
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  #keyword {
+    flex: 1;
+    border: 2px solid var(--line);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-size: 1rem;
+    outline: none;
+    font-family: inherit;
+  }
+  #keyword:focus { border-color: var(--amber-deep); }
+  button#searchBtn {
+    background: var(--amber-deep);
+    color: var(--paper);
+    border: none;
+    border-radius: 8px;
+    padding: 0 26px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button#searchBtn:disabled { background: var(--muted); cursor: default; }
+  .suggest-item { padding: 10px 16px; cursor: pointer; font-size: 0.95rem; }
+  .suggest-item:hover { background: var(--paper); }
+  .chip {
+    background: var(--card);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    border-radius: 999px;
+    padding: 7px 16px;
+    font-size: 0.88rem;
+    cursor: pointer;
+  }
+  .chip:hover { border-color: var(--amber-deep); color: var(--amber-deep); }
+  .status { text-align:center; color: var(--muted); margin: 20px 0; font-size: 0.98rem; }
+  .status.error { color: #a3402f; }
+  .result-count { color: var(--muted); font-size: 0.9rem; margin: 0 2px 4px; }
+  #loadMoreBtn {
+    display: block;
+    margin: 14px auto 0;
+    background: none;
+    border: 1px solid var(--amber-deep);
+    color: var(--amber-deep);
+    border-radius: 999px;
+    padding: 8px 20px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  @media (max-width: 480px) {
+    .search-card { flex-direction: column; }
+    #keyword { font-size: 16px; }
+    button#searchBtn { width: 100%; min-height: 48px; }
+  }
+
+  /* --- Collapsible Profile & Preferences --- */
+  #prefsDetails { margin-top: 20px; }
+  #prefsDetails summary {
+    font-size: 1.4rem;
+    font-weight: 700;
+    cursor: pointer;
+    list-style: none;
+    padding: 4px 0;
+  }
+  #prefsDetails summary::-webkit-details-marker { display: none; }
+  #prefsDetails summary::before {
+    content: '▸';
+    display: inline-block;
+    margin-right: 8px;
+    color: var(--amber-deep);
+    transition: transform 0.15s ease;
+  }
+  #prefsDetails[open] summary::before { transform: rotate(90deg); }
+  #prefsDetails .profile-field:first-of-type { margin-top: 14px; }
+
   #accountNavBar {
     position: fixed;
     top: 14px;
@@ -258,7 +342,40 @@
   <h1>My Account</h1>
 </header>
 <main>
-  <h2 style="margin-top:20px;">Profile &amp; Preferences</h2>
+  <div class="search-card" style="position:relative;">
+    <div style="flex:1; position:relative;">
+      <input type="text" id="keyword" placeholder="Search an artist, team, or show…" autocomplete="off" style="width:100%; box-sizing:border-box; border:2px solid var(--line); border-radius:8px; padding:14px 90px 14px 16px; font-size:1rem; outline:none; font-family:inherit;">
+      <button id="dateIconBtn" type="button" title="Choose dates" style="position:absolute; right:14px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:1.15rem; line-height:1; color:var(--muted); padding:4px;">📅</button>
+      <div id="suggestDropdown" style="display:none; position:absolute; top:100%; left:0; right:0; background:var(--card); border:1px solid var(--line); border-radius:8px; margin-top:4px; box-shadow:0 8px 20px -8px rgba(20,23,31,0.3); z-index:10; overflow:hidden;"></div>
+      <div id="datePopover" style="display:none; position:absolute; top:100%; right:0; margin-top:6px; background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px 14px; box-shadow:0 8px 20px -8px rgba(20,23,31,0.3); z-index:20; white-space:nowrap;">
+        <div style="display:flex; align-items:center; gap:8px; font-size:0.85rem; color:var(--muted);">
+          <label for="dateFrom">Dates:</label>
+          <input type="date" id="dateFrom" style="font-family:inherit; font-size:0.85rem; border:1px solid var(--line); border-radius:6px; padding:4px 6px; background:var(--paper); color:var(--ink);">
+          <span>to</span>
+          <input type="date" id="dateTo" style="font-family:inherit; font-size:0.85rem; border:1px solid var(--line); border-radius:6px; padding:4px 6px; background:var(--paper); color:var(--ink);">
+        </div>
+        <div style="text-align:right; margin-top:8px;">
+          <button id="clearDatesBtn" type="button" style="display:none; background:none; border:none; color:var(--muted); cursor:pointer; font-size:0.8rem; text-decoration:underline; font-family:inherit;">Clear</button>
+        </div>
+      </div>
+    </div>
+    <button id="searchBtn">Search</button>
+  </div>
+
+  <div id="categoryRow" style="display:none; align-items:center; justify-content:center; flex-wrap:wrap; gap:8px; margin-top:10px;"></div>
+
+  <div id="searchHideTributeRow" style="display:none; align-items:center; justify-content:center; gap:6px; margin-top:8px; font-size:0.85rem; color:var(--muted);">
+    <label style="cursor:pointer; user-select:none;">
+      <input type="checkbox" id="searchHideTributeCheckbox" style="cursor:pointer; vertical-align:middle; margin-right:4px;">
+      Hide tribute/cover acts
+    </label>
+  </div>
+
+  <div id="status" class="status"></div>
+  <div id="results"></div>
+
+  <details id="prefsDetails">
+  <summary>Profile &amp; Preferences</summary>
   <div class="profile-field">
     <label for="displayName">Name</label>
     <input type="text" id="displayName" placeholder="Your name" maxlength="100">
@@ -284,6 +401,7 @@
   </div>
   <button id="saveProfileBtn">Save preferences</button>
   <div id="profileStatus"></div>
+  </details>
 
   <div class="section-header">
     <h2 style="margin-bottom:0;">Favorited Events</h2>
@@ -329,6 +447,8 @@
   let allArtistShows = [];
   let followedArtistCount = 0;
   let selectedArtistFilters = new Set();
+
+  const SEARCH_API_URL = `${API_URL}/searchevents`;
 
   if (!token) {
     window.location.href = '/';
@@ -768,6 +888,398 @@
     return str.replace(/[&<>"']/g, m => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
     }[m]));
+  }
+
+  // --- Inline search (ported from the homepage, reusing this page's
+  // existing formatPrice/escapeHtml/looksLikeTribute/buildRowCard/
+  // toggleShowFavorite helpers so favoriting behaves identically here) ---
+
+  const MAJOR_CITIES = [
+    "New York", "Los Angeles", "Chicago", "Houston", "Phoenix",
+    "Philadelphia", "San Antonio", "San Diego", "Dallas", "Austin",
+    "Jacksonville", "Fort Worth", "San Jose", "Columbus", "Charlotte",
+    "Indianapolis", "San Francisco", "Seattle", "Denver", "Nashville",
+    "Oklahoma City", "El Paso", "Boston", "Portland", "Las Vegas",
+    "Detroit", "Memphis", "Louisville", "Milwaukee", "Baltimore",
+    "Albuquerque", "Tucson", "Fresno", "Sacramento", "Kansas City",
+    "Atlanta", "Miami", "Raleigh", "Omaha", "Minneapolis",
+    "Cleveland", "Tampa", "St. Louis", "Pittsburgh", "Cincinnati",
+    "Orlando", "New Orleans", "Salt Lake City"
+  ];
+
+  const searchInput = document.getElementById('keyword');
+  const searchBtnEl = document.getElementById('searchBtn');
+  const searchStatus = document.getElementById('status');
+  const searchResultsEl = document.getElementById('results');
+  const dateIconBtn = document.getElementById('dateIconBtn');
+  const datePopover = document.getElementById('datePopover');
+  const dateFromInput = document.getElementById('dateFrom');
+  const dateToInput = document.getElementById('dateTo');
+  const clearDatesBtn = document.getElementById('clearDatesBtn');
+  const categoryRow = document.getElementById('categoryRow');
+  const searchHideTributeRow = document.getElementById('searchHideTributeRow');
+  const searchHideTributeCheckbox = document.getElementById('searchHideTributeCheckbox');
+  const suggestDropdown = document.getElementById('suggestDropdown');
+
+  const CATEGORIES = ["All", "Music", "Sports", "Arts & Theatre", "Family", "Film"];
+  let currentCategory = "All";
+  let currentResults = [];
+  let resultsDisplayCount = 25;
+  let currentSearchTerm = null;
+  let resultsCurrentPage = 0;
+  let resultsTotalPages = 1;
+  let isFetchingMorePage = false;
+
+  function renderCategoryChips() {
+    categoryRow.innerHTML = '';
+    CATEGORIES.forEach(cat => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'chip';
+      chip.textContent = cat;
+      if (cat === currentCategory) {
+        chip.style.background = 'var(--amber-deep)';
+        chip.style.color = 'var(--paper)';
+        chip.style.borderColor = 'var(--amber-deep)';
+      }
+      chip.addEventListener('click', async () => {
+        if (cat === currentCategory) return;
+        currentCategory = cat;
+        renderCategoryChips();
+        if (!currentSearchTerm) return;
+
+        resultsDisplayCount = 25;
+        searchStatus.className = "status";
+        searchStatus.textContent = "Updating results…";
+
+        try {
+          const data = await fetchEvents(currentSearchTerm, dateFromInput.value || null, dateToInput.value || null, cat, 0);
+          currentResults = data.events || [];
+          resultsCurrentPage = data.page || 0;
+          resultsTotalPages = data.totalPages || 1;
+          searchStatus.textContent = "";
+        } catch (err) {
+          console.error('Failed to refetch for category change', err);
+          searchStatus.className = "status error";
+          searchStatus.textContent = "Something went wrong updating the category filter.";
+        }
+        renderSearchResultsList();
+      });
+      categoryRow.appendChild(chip);
+    });
+  }
+  renderCategoryChips();
+
+  function updateSearchControlsVisibility() {
+    const hasQuery = searchInput.value.trim().length > 0;
+    categoryRow.style.display = hasQuery ? 'flex' : 'none';
+    searchHideTributeRow.style.display = hasQuery ? 'flex' : 'none';
+  }
+  searchInput.addEventListener('input', updateSearchControlsVisibility);
+
+  searchHideTributeCheckbox.addEventListener('change', () => {
+    resultsDisplayCount = 25;
+    renderSearchResultsList();
+  });
+
+  dateIconBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    datePopover.style.display = datePopover.style.display === 'none' ? 'block' : 'none';
+  });
+  document.addEventListener('click', (e) => {
+    if (datePopover.style.display !== 'none' && !datePopover.contains(e.target) && e.target !== dateIconBtn) {
+      datePopover.style.display = 'none';
+    }
+    if (!e.target.closest('.search-card')) {
+      suggestDropdown.style.display = 'none';
+    }
+  });
+  datePopover.addEventListener('click', (e) => e.stopPropagation());
+
+  clearDatesBtn.addEventListener('click', () => {
+    dateFromInput.value = '';
+    dateToInput.value = '';
+    dateToInput.removeAttribute('min');
+    updateClearDatesVisibility();
+  });
+  function updateClearDatesVisibility() {
+    const hasDates = dateFromInput.value || dateToInput.value;
+    clearDatesBtn.style.display = hasDates ? 'inline' : 'none';
+    dateIconBtn.style.color = hasDates ? 'var(--amber-deep)' : 'var(--muted)';
+  }
+  dateFromInput.addEventListener('change', () => {
+    updateClearDatesVisibility();
+    if (dateFromInput.value) {
+      dateToInput.min = dateFromInput.value;
+      if (!dateToInput.value || dateToInput.value < dateFromInput.value) {
+        dateToInput.value = dateFromInput.value;
+      }
+    } else {
+      dateToInput.removeAttribute('min');
+    }
+  });
+  dateToInput.addEventListener('change', updateClearDatesVisibility);
+
+  async function fetchEvents(keyword, startDate, endDate, category, page) {
+    let url = `${SEARCH_API_URL}?keyword=${encodeURIComponent(keyword)}`;
+    if (startDate) url += `&startDate=${encodeURIComponent(startDate)}`;
+    if (endDate) url += `&endDate=${encodeURIComponent(endDate)}`;
+    if (category && category !== 'All') url += `&category=${encodeURIComponent(category)}`;
+    if (page) url += `&page=${page}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `Server responded with ${res.status}`);
+    return data;
+  }
+
+  async function runAccountSearch() {
+    datePopover.style.display = 'none';
+    const keyword = searchInput.value.trim();
+    if (!keyword) {
+      searchStatus.textContent = "Type something to search for — an artist, a team, a show.";
+      searchStatus.className = "status error";
+      searchResultsEl.innerHTML = "";
+      return;
+    }
+
+    const startDate = dateFromInput.value || null;
+    const endDate = dateToInput.value || null;
+    if (startDate && endDate && endDate < startDate) {
+      searchStatus.textContent = "Your end date is before your start date. Please fix the date range.";
+      searchStatus.className = "status error";
+      return;
+    }
+
+    searchBtnEl.disabled = true;
+    searchBtnEl.textContent = "Searching…";
+    searchStatus.className = "status";
+    searchStatus.textContent = "Fetching live prices…";
+    searchResultsEl.innerHTML = "";
+
+    try {
+      let data;
+      let resolvedFrom = null;
+      const lowerKeyword = keyword.toLowerCase();
+      const cityMatch = MAJOR_CITIES.find(c => c.toLowerCase().startsWith(lowerKeyword));
+
+      if (cityMatch && cityMatch.toLowerCase() !== lowerKeyword) {
+        data = await fetchEvents(cityMatch, startDate, endDate);
+        if (data.events && data.events.length > 0) {
+          resolvedFrom = cityMatch;
+        } else {
+          data = await fetchEvents(keyword, startDate, endDate);
+        }
+      } else {
+        data = await fetchEvents(keyword, startDate, endDate);
+      }
+
+      if ((!data.events || data.events.length === 0) && keyword.length >= 2) {
+        try {
+          const suggestRes = await fetch(`${API_URL}/suggestartists?keyword=${encodeURIComponent(keyword)}`);
+          const suggestData = await suggestRes.json();
+          const topSuggestion = (suggestData.suggestions || [])[0];
+          if (topSuggestion && topSuggestion.toLowerCase() !== keyword.toLowerCase()) {
+            const retryData = await fetchEvents(topSuggestion, startDate, endDate);
+            if (retryData.events && retryData.events.length > 0) {
+              data = retryData;
+              resolvedFrom = topSuggestion;
+            }
+          }
+        } catch (suggestErr) {
+          console.error('Suggestion fallback failed', suggestErr);
+        }
+      }
+
+      if (!data.events || data.events.length === 0) {
+        searchStatus.textContent = "";
+        const emptyMsg = document.createElement('p');
+        emptyMsg.className = 'status';
+        emptyMsg.textContent = `No upcoming events found for "${keyword}" right now.`;
+        searchResultsEl.appendChild(emptyMsg);
+        return;
+      }
+
+      const resolvedTerm = resolvedFrom || data.keyword || keyword;
+
+      searchStatus.textContent = "";
+
+      if (resolvedFrom) {
+        const correctionNote = document.createElement('p');
+        correctionNote.className = 'status';
+        correctionNote.style.cssText = 'font-size: 0.85rem; font-style: italic; color: var(--muted); margin: 0 2px 6px;';
+        correctionNote.textContent = `Showing results for "${resolvedFrom}"`;
+        searchResultsEl.appendChild(correctionNote);
+      }
+
+      const countLine = document.createElement('p');
+      countLine.className = 'result-count';
+      countLine.textContent = `${data.count} result${data.count === 1 ? '' : 's'} for "${resolvedTerm}"`;
+      searchResultsEl.appendChild(countLine);
+
+      currentResults = data.events || [];
+      resultsDisplayCount = 25;
+      currentSearchTerm = resolvedTerm;
+      resultsCurrentPage = data.page || 0;
+      resultsTotalPages = data.totalPages || 1;
+
+      const listEl = document.createElement('div');
+      listEl.id = 'searchResultsList';
+      listEl.className = 'row-list';
+      searchResultsEl.appendChild(listEl);
+
+      renderSearchResultsList();
+    } catch (err) {
+      searchStatus.className = "status error";
+      searchStatus.textContent = err.message || "Something went wrong reaching the ticket search. Please try again in a moment.";
+      console.error(err);
+    } finally {
+      searchBtnEl.disabled = false;
+      searchBtnEl.textContent = "Search";
+    }
+  }
+
+  function renderSearchResultsList() {
+    const listEl = document.getElementById('searchResultsList');
+    if (!listEl) return;
+
+    let visible = currentResults;
+    if (searchHideTributeCheckbox.checked) {
+      visible = visible.filter(ev => !looksLikeTribute(ev.name));
+    }
+
+    listEl.innerHTML = '';
+    const toShow = visible.slice(0, resultsDisplayCount);
+    toShow.forEach(ev => listEl.appendChild(buildRowCard(ev)));
+
+    const existingBtn = document.getElementById('loadMoreBtn');
+    if (existingBtn) existingBtn.remove();
+
+    const hasMorePages = (resultsCurrentPage + 1) < resultsTotalPages;
+
+    if (visible.length === 0) {
+      const emptyMsg = document.createElement('p');
+      emptyMsg.className = 'status';
+      emptyMsg.textContent = hasMorePages
+        ? `No ${currentCategory.toLowerCase()} events in what we've fetched so far — checking for more…`
+        : `No ${currentCategory.toLowerCase()} events found in this range.`;
+      listEl.appendChild(emptyMsg);
+      if (hasMorePages) fetchNextAccountResultsPage();
+      return;
+    }
+
+    if (resultsDisplayCount < visible.length) {
+      const loadMoreBtn = document.createElement('button');
+      loadMoreBtn.id = 'loadMoreBtn';
+      loadMoreBtn.textContent = `Load more (${visible.length - resultsDisplayCount} remaining)`;
+      loadMoreBtn.addEventListener('click', () => {
+        resultsDisplayCount += 25;
+        renderSearchResultsList();
+      });
+      searchResultsEl.appendChild(loadMoreBtn);
+    } else if (hasMorePages) {
+      const loadMoreBtn = document.createElement('button');
+      loadMoreBtn.id = 'loadMoreBtn';
+      loadMoreBtn.textContent = 'Load more';
+      loadMoreBtn.addEventListener('click', fetchNextAccountResultsPage);
+      searchResultsEl.appendChild(loadMoreBtn);
+    }
+  }
+
+  async function fetchNextAccountResultsPage() {
+    if (!currentSearchTerm || isFetchingMorePage) return;
+    const nextPage = resultsCurrentPage + 1;
+    if (nextPage >= resultsTotalPages) return;
+
+    isFetchingMorePage = true;
+    const btn = document.getElementById('loadMoreBtn');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Loading more…';
+    }
+
+    try {
+      const data = await fetchEvents(currentSearchTerm, dateFromInput.value || null, dateToInput.value || null, currentCategory, nextPage);
+      if (data.events) {
+        const seenKeys = new Set(currentResults.map(ev => `${ev.name}|${ev.date}|${ev.venue}`));
+        const newEvents = data.events.filter(ev => !seenKeys.has(`${ev.name}|${ev.date}|${ev.venue}`));
+        currentResults = currentResults.concat(newEvents);
+        resultsCurrentPage = data.page;
+        resultsTotalPages = data.totalPages;
+      }
+    } catch (err) {
+      console.error('Failed to fetch additional results page', err);
+    } finally {
+      isFetchingMorePage = false;
+      resultsDisplayCount += 25;
+      renderSearchResultsList();
+    }
+  }
+
+  searchBtnEl.addEventListener('click', runAccountSearch);
+  searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') runAccountSearch(); });
+
+  let searchSuggestTimeout = null;
+  searchInput.addEventListener('input', () => {
+    clearTimeout(searchSuggestTimeout);
+    const query = searchInput.value.trim();
+    if (query.length < 2) {
+      suggestDropdown.style.display = 'none';
+      return;
+    }
+    searchSuggestTimeout = setTimeout(() => fetchAccountSuggestions(query), 250);
+  });
+
+  async function fetchAccountSuggestions(query) {
+    const lowerQuery = query.toLowerCase();
+    const matchingCities = MAJOR_CITIES.filter(c => c.toLowerCase().startsWith(lowerQuery));
+
+    try {
+      const res = await fetch(`${API_URL}/suggestartists?keyword=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      const artistSuggestions = data.suggestions || [];
+
+      const combined = [
+        ...matchingCities,
+        ...artistSuggestions.filter(name => !matchingCities.some(c => c.toLowerCase() === name.toLowerCase()))
+      ];
+
+      if (combined.length === 0) {
+        suggestDropdown.style.display = 'none';
+        return;
+      }
+
+      suggestDropdown.innerHTML = '';
+      combined.forEach(name => {
+        const item = document.createElement('div');
+        item.className = 'suggest-item';
+        item.style.cssText = 'display:flex; justify-content:space-between; align-items:center;';
+
+        const isCity = MAJOR_CITIES.some(c => c.toLowerCase() === name.toLowerCase());
+        const label = document.createElement('span');
+        label.textContent = name;
+        item.appendChild(label);
+
+        if (isCity) {
+          const badge = document.createElement('span');
+          badge.textContent = '📍 CITY';
+          badge.style.cssText = 'background:var(--amber-deep); color:var(--paper); font-size:0.65rem; font-weight:700; letter-spacing:0.03em; padding:3px 7px; border-radius:999px; margin-left:10px; flex-shrink:0;';
+          item.appendChild(badge);
+        }
+
+        item.addEventListener('click', () => {
+          searchInput.value = name;
+          updateSearchControlsVisibility();
+          suggestDropdown.style.display = 'none';
+          runAccountSearch();
+        });
+        suggestDropdown.appendChild(item);
+      });
+
+      suggestDropdown.style.display = 'block';
+    } catch (err) {
+      console.error('Failed to load suggestions', err);
+      suggestDropdown.style.display = 'none';
+    }
   }
 </script>
 </body>
