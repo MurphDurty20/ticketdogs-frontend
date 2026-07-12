@@ -748,6 +748,7 @@
       allFavorites = allFavorites.filter(f => f.id !== fav.id);
       card.remove();
       if (allFavorites.length === 0) document.getElementById('favEmpty').style.display = 'block';
+      renderArtistShows();
     });
 
     card.appendChild(removeBtn);
