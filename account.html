@@ -221,6 +221,21 @@
     padding: 4px;
   }
 
+  .row-fav-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+    padding: 4px;
+    line-height: 1;
+  }
+
+  .row-fav-btn.is-fav {
+    color: var(--amber-deep);
+  }
+
   .artist-chip-row { display:flex; flex-wrap:wrap; gap:10px; margin-top: 10px; }
   .artist-chip { background:var(--card); border:1px solid var(--line); border-radius:999px; padding:8px 16px; font-size:0.9rem; display:flex; align-items:center; gap:8px; }
   .artist-chip button { background:none; border:none; color:var(--muted); cursor:pointer; font-size:1rem; line-height:1; padding:0; }
@@ -600,10 +615,11 @@
 
       if (allFavorites.length === 0) {
         emptyMsg.style.display = 'block';
-        return;
+      } else {
+        renderFavorites();
       }
 
-      renderFavorites();
+      renderArtistShows();
     } catch (err) {
       emptyMsg.textContent = 'Something went wrong loading your favorites.';
       emptyMsg.style.display = 'block';
@@ -631,23 +647,76 @@
   document.getElementById('favSort').addEventListener('change', renderFavorites);
 
   function buildRowCard(ev) {
-    const card = document.createElement('a');
-    card.href = ev.url || '#';
-    card.target = '_blank';
-    card.rel = 'noopener noreferrer';
+    const card = document.createElement('div');
     card.className = 'row-card';
 
     const thumbStyle = ev.image ? `background-image: url('${escapeHtml(ev.image)}');` : '';
 
     card.innerHTML = `
-      <div class="row-thumb" style="${thumbStyle}"></div>
-      <div class="row-details">
-        <p class="row-name">${escapeHtml(ev.name)}</p>
-        <div class="row-meta">${escapeHtml(ev.date)} · ${escapeHtml(ev.venue)}${ev.city ? ', ' + escapeHtml(ev.city) : ''}</div>
-      </div>
-      <div class="row-price">${formatPrice(ev.price, ev.source)}</div>
+      <a href="${ev.url || '#'}" target="_blank" rel="noopener noreferrer" style="display:flex; align-items:center; gap:14px; flex:1; min-width:0; text-decoration:none; color:inherit;">
+        <div class="row-thumb" style="${thumbStyle}"></div>
+        <div class="row-details">
+          <p class="row-name">${escapeHtml(ev.name)}</p>
+          <div class="row-meta">${escapeHtml(ev.date)} · ${escapeHtml(ev.venue)}${ev.city ? ', ' + escapeHtml(ev.city) : ''}</div>
+        </div>
+        <div class="row-price">${formatPrice(ev.price, ev.source)}</div>
+      </a>
     `;
+
+    const isFav = isEventFavorited(ev);
+    const favBtn = document.createElement('button');
+    favBtn.className = 'row-fav-btn' + (isFav ? ' is-fav' : '');
+    favBtn.textContent = isFav ? '★' : '☆';
+    favBtn.title = isFav ? 'Remove from favorites' : 'Save to favorites';
+    favBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      await toggleShowFavorite(ev, favBtn);
+    });
+
+    card.appendChild(favBtn);
     return card;
+  }
+
+  function isEventFavorited(ev) {
+    return allFavorites.some(f => f.url === ev.url);
+  }
+
+  async function toggleShowFavorite(ev, btnEl) {
+    const existing = allFavorites.find(f => f.url === ev.url);
+
+    try {
+      if (existing) {
+        await fetch(`${API_URL}/removefavorite`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Session-Token': token },
+          body: JSON.stringify({ id: existing.id })
+        });
+        allFavorites = allFavorites.filter(f => f.id !== existing.id);
+        btnEl.textContent = '☆';
+        btnEl.classList.remove('is-fav');
+        btnEl.title = 'Save to favorites';
+      } else {
+        const res = await fetch(`${API_URL}/addfavorite`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Session-Token': token },
+          body: JSON.stringify(ev)
+        });
+        const data = await res.json();
+        allFavorites.push({
+          id: data.id, name: ev.name, date: ev.date, venue: ev.venue,
+          city: ev.city, price: ev.price, url: ev.url, image: ev.image, source: ev.source
+        });
+        btnEl.textContent = '★';
+        btnEl.classList.add('is-fav');
+        btnEl.title = 'Remove from favorites';
+      }
+
+      document.getElementById('favEmpty').style.display = allFavorites.length === 0 ? 'block' : 'none';
+      renderFavorites();
+    } catch (err) {
+      console.error('Failed to update favorite', err);
+    }
   }
 
   function buildFavoriteRowCard(fav) {
