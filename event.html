@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Olivia Rodrigo: The Unraveled Tour - TicketDogs</title>
+<style>
+  :root {
+    --ink: #0f2031; --paper: #f6f3ec; --amber-deep: #b98c48;
+    --line: #d8d2c2; --muted: #6b6558; --card: #ffffff;
+    --live: #5b7553; --live-bg: #eaf0e6;
+    --pending: #8a7f6d; --pending-bg: #efece3;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink); font-family:'Segoe UI', system-ui, sans-serif; }
+  a { color: inherit; }
+
+  #accountNavBar {
+    position: fixed; top: 14px; right: 20px; font-size: 0.85rem;
+    color: var(--muted); z-index: 200; background: var(--paper);
+    padding: 4px 8px; border-radius: 8px;
+  }
+  #accountNavBar a { color: var(--amber-deep); text-decoration: none; }
+
+  main { max-width: 900px; margin: 0 auto 80px; }
+
+  .back-row { padding: 20px 20px 0; }
+  .back-row a { color: var(--amber-deep); text-decoration:none; font-size:0.9rem; }
+
+  /* --- Hero --- */
+  .hero {
+    position: relative;
+    margin: 16px 20px 0;
+    border-radius: 18px;
+    overflow: hidden;
+    min-height: 260px;
+    display: flex;
+    align-items: flex-end;
+    background: #1a2733 center/cover;
+    box-shadow: 0 18px 40px -20px rgba(15,32,49,0.5);
+  }
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(15,32,49,0.15) 0%, rgba(15,32,49,0.88) 100%);
+  }
+  .hero-content { position: relative; padding: 28px 28px 26px; color: var(--paper); width: 100%; }
+  .hero-eyebrow {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase;
+    color: #e7c88a; margin-bottom: 10px; font-weight: 600;
+  }
+  .hero-title { font-size: 2rem; line-height: 1.15; margin: 0 0 8px; font-weight: 700; }
+  .hero-meta { font-size: 0.95rem; opacity: 0.85; margin: 0; }
+
+  .best-price-ribbon {
+    position: absolute; top: 22px; right: 22px;
+    background: var(--amber-deep); color: var(--paper);
+    padding: 10px 16px; border-radius: 12px;
+    text-align: right;
+    box-shadow: 0 10px 24px -10px rgba(0,0,0,0.5);
+  }
+  .best-price-ribbon .label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.9; display:block; }
+  .best-price-ribbon .amount { font-size: 1.5rem; font-weight: 700; display:block; line-height: 1.15; }
+  .best-price-ribbon .source { font-size: 0.72rem; opacity: 0.85; }
+
+  .fav-toggle {
+    position: absolute; top: 22px; left: 22px;
+    background: rgba(15,32,49,0.55); border: none; color: var(--paper);
+    width: 40px; height: 40px; border-radius: 50%;
+    font-size: 1.2rem; cursor: pointer; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .fav-toggle.is-fav { color: var(--amber-deep); background: rgba(255,255,255,0.92); }
+
+  /* --- Section headings --- */
+  .section-label {
+    font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--muted); margin: 34px 20px 12px; font-weight: 700;
+  }
+
+  /* --- Marketplace comparison cards --- */
+  .marketplace-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin: 0 20px;
+  }
+  @media (max-width: 760px) {
+    .marketplace-grid { grid-template-columns: 1fr; }
+  }
+
+  .mkt-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    position: relative;
+  }
+  .mkt-card.is-best {
+    border-color: var(--amber-deep);
+    box-shadow: 0 0 0 2px var(--amber-deep) inset, 0 16px 30px -18px rgba(185,140,72,0.5);
+  }
+  .mkt-card.is-best::before {
+    content: 'Best price';
+    position: absolute; top: -11px; left: 18px;
+    background: var(--amber-deep); color: var(--paper);
+    font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em;
+    text-transform: uppercase; padding: 4px 10px; border-radius: 999px;
+  }
+
+  .mkt-head { display: flex; align-items: center; justify-content: space-between; }
+  .mkt-name { font-size: 1.05rem; font-weight: 700; }
+  .mkt-status {
+    font-size: 0.68rem; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase;
+    padding: 3px 9px; border-radius: 999px;
+  }
+  .mkt-status.live { background: var(--live-bg); color: var(--live); }
+  .mkt-status.pending { background: var(--pending-bg); color: var(--pending); }
+
+  .mkt-price { line-height: 1.1; }
+  .mkt-price .amount { font-size: 1.7rem; font-weight: 700; }
+  .mkt-price .amount.dim { color: var(--muted); font-size: 1.1rem; font-weight: 600; }
+  .mkt-price .caption { display:block; font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+
+  .mkt-metrics { display: flex; flex-direction: column; gap: 6px; font-size: 0.85rem; color: var(--muted); }
+  .mkt-metrics .row { display: flex; justify-content: space-between; }
+  .mkt-metrics .row span:last-child { color: var(--ink); font-weight: 600; }
+
+  .mkt-cta {
+    margin-top: auto;
+    text-align: center;
+    text-decoration: none;
+    padding: 11px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.92rem;
+  }
+  .mkt-cta.primary { background: var(--amber-deep); color: var(--paper); }
+  .mkt-cta.pending {
+    background: none; border: 1px dashed var(--line); color: var(--muted);
+    cursor: default;
+  }
+
+  .pending-note { font-size: 0.8rem; color: var(--muted); line-height: 1.4; margin: 0; }
+
+  /* --- Notify strip --- */
+  .notify-strip {
+    margin: 22px 20px 0;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 18px;
+    font-size: 0.85rem;
+    color: var(--muted);
+    text-align: center;
+  }
+  .notify-strip strong { color: var(--ink); }
+
+  /* --- Details --- */
+  .details-card {
+    margin: 0 20px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    font-size: 0.92rem;
+  }
+  .details-card .row { display: flex; justify-content: space-between; gap: 20px; }
+  .details-card .row .k { color: var(--muted); }
+  .details-card .row .v { font-weight: 600; text-align: right; }
+
+  @media (max-width: 480px) {
+    .hero-title { font-size: 1.5rem; }
+    .best-price-ribbon { position: static; margin-top: 14px; display: inline-block; text-align: left; }
+    .fav-toggle { top: 14px; left: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="accountNavBar"></div>
+
+<main>
+  <div class="back-row"><a href="/">← Back to search</a></div>
+
+  <div class="hero" id="heroImage">
+    <button class="fav-toggle" id="favToggle" title="Save to favorites">☆</button>
+    <div class="best-price-ribbon">
+      <span class="label">Best price found</span>
+      <span class="amount">$142</span>
+      <span class="source">on Ticketmaster</span>
+    </div>
+    <div class="hero-content">
+      <span class="hero-eyebrow">🎤 Music · Pop</span>
+      <h1 class="hero-title">Olivia Rodrigo: The Unraveled Tour</h1>
+      <p class="hero-meta">Thu, Sep 25, 2026 · 7:30 PM · PeoplesBank Arena, Hartford, CT</p>
+    </div>
+  </div>
+
+  <p class="section-label">Compare prices</p>
+  <div class="marketplace-grid">
+
+    <div class="mkt-card is-best">
+      <div class="mkt-head">
+        <span class="mkt-name">Ticketmaster</span>
+        <span class="mkt-status live">Live</span>
+      </div>
+      <div class="mkt-price">
+        <span class="amount">$142</span>
+        <span class="caption">Lowest of 340 listings</span>
+      </div>
+      <div class="mkt-metrics">
+        <div class="row"><span>Fees</span><span>Included at checkout</span></div>
+        <div class="row"><span>Delivery</span><span>Mobile ticket</span></div>
+      </div>
+      <a href="#" class="mkt-cta primary">See on Ticketmaster →</a>
+    </div>
+
+    <div class="mkt-card">
+      <div class="mkt-head">
+        <span class="mkt-name">SeatGeek</span>
+        <span class="mkt-status pending">Pending approval</span>
+      </div>
+      <div class="mkt-price">
+        <span class="amount dim">—</span>
+        <span class="caption">Not connected yet</span>
+      </div>
+      <div class="mkt-metrics">
+        <div class="row"><span>Fees</span><span>—</span></div>
+        <div class="row"><span>Delivery</span><span>—</span></div>
+      </div>
+      <p class="pending-note">We've applied for SeatGeek API access and are waiting on approval.</p>
+      <span class="mkt-cta pending">Coming soon</span>
+    </div>
+
+    <div class="mkt-card">
+      <div class="mkt-head">
+        <span class="mkt-name">StubHub</span>
+        <span class="mkt-status pending">Pending approval</span>
+      </div>
+      <div class="mkt-price">
+        <span class="amount dim">—</span>
+        <span class="caption">Not connected yet</span>
+      </div>
+      <div class="mkt-metrics">
+        <div class="row"><span>Fees</span><span>—</span></div>
+        <div class="row"><span>Delivery</span><span>—</span></div>
+      </div>
+      <p class="pending-note">We've requested affiliate/API access from StubHub and are waiting to hear back.</p>
+      <span class="mkt-cta pending">Coming soon</span>
+    </div>
+
+  </div>
+
+  <div class="notify-strip">
+    Only <strong>1 of 3</strong> marketplaces connected so far — prices will fill in automatically as SeatGeek and StubHub access comes through.
+  </div>
+
+  <p class="section-label">Event details</p>
+  <div class="details-card">
+    <div class="row"><span class="k">Venue</span><span class="v">PeoplesBank Arena, Hartford, CT</span></div>
+    <div class="row"><span class="k">Date &amp; time</span><span class="v">Thursday, September 25, 2026 · 7:30 PM</span></div>
+    <div class="row"><span class="k">Category</span><span class="v">Music — Pop</span></div>
+    <div class="row"><span class="k">Also playing</span><span class="v">Wolf Alice (opener)</span></div>
+  </div>
+</main>
+
+<script>
+  const API_URL = "https://ticketdogs-api.azurewebsites.net/api";
+  const token = localStorage.getItem('sessionToken');
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/[&<>"']/g, m => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[m]));
+  }
+
+  // -----------------------------------------------------------------
+  // Event data arrives via sessionStorage — set by the card the user
+  // clicked on (search results, favorites, or upcoming shows), since we
+  // already have the full Ticketmaster event object at that point and
+  // don't need a second network round-trip just to redisplay it here.
+  //
+  // Once SeatGeek/StubHub access comes through, this is where their
+  // fetch calls get added: look up the same event on each marketplace
+  // (by artist + venue + date, same matching approach used for tribute
+  // detection) and populate their mkt-card the same way Ticketmaster's
+  // is populated below, swapping the "pending" state for a real price.
+  // -----------------------------------------------------------------
+
+  const navBar = document.getElementById('accountNavBar');
+  if (token) {
+    navBar.innerHTML = `Signed in as <span>${escapeHtml(localStorage.getItem('userEmail') || '')}</span> · <a href="/account.html">My Account</a>`;
+  } else {
+    navBar.innerHTML = `<a href="/">Log in</a>`;
+  }
+
+  let ev = null;
+  try {
+    ev = JSON.parse(sessionStorage.getItem('compareEvent') || 'null');
+  } catch (err) {
+    console.error('Failed to read event data', err);
+  }
+
+  if (!ev || !ev.name) {
+    document.querySelector('main').innerHTML = `
+      <div class="back-row"><a href="/">← Back to search</a></div>
+      <p style="text-align:center; color:var(--muted); margin-top:60px;">
+        No event selected. Head back to search and pick an event to compare prices.
+      </p>
+    `;
+  } else {
+    document.title = `${ev.name} - TicketDogs`;
+
+    if (ev.image) {
+      document.getElementById('heroImage').style.backgroundImage = `url('${ev.image}')`;
+    }
+
+    document.querySelector('.hero-eyebrow').textContent = ev.category ? `🎤 ${ev.category}` : '🎟️ Event';
+    document.querySelector('.hero-title').textContent = ev.name;
+    document.querySelector('.hero-meta').textContent =
+      `${ev.date || ''}${ev.venue ? ' · ' + ev.venue : ''}${ev.city ? ', ' + ev.city : ''}`;
+
+    // Ticketmaster is the only live source right now, so it's always
+    // "best price" by default — this becomes a real Math.min comparison
+    // once SeatGeek/StubHub have live prices to compare against.
+    const hasPrice = ev.price && ev.price !== 'Price not listed';
+    const ribbon = document.querySelector('.best-price-ribbon');
+    if (hasPrice) {
+      ribbon.querySelector('.amount').textContent = ev.price;
+      ribbon.querySelector('.source').textContent = `on ${ev.source || 'Ticketmaster'}`;
+    } else {
+      ribbon.style.display = 'none';
+    }
+
+    const tmCard = document.querySelector('.marketplace-grid .mkt-card.is-best');
+    tmCard.querySelector('.mkt-name').textContent = ev.source || 'Ticketmaster';
+    const priceEl = tmCard.querySelector('.mkt-price');
+    if (hasPrice) {
+      priceEl.querySelector('.amount').textContent = ev.price;
+      priceEl.querySelector('.caption').textContent = 'Live price from Ticketmaster';
+    } else {
+      priceEl.querySelector('.amount').textContent = 'See price';
+      priceEl.querySelector('.caption').textContent = 'Exact pricing shown at checkout';
+    }
+    const tmCta = tmCard.querySelector('.mkt-cta');
+    tmCta.href = ev.url || '#';
+    tmCta.target = '_blank';
+    tmCta.rel = 'noopener noreferrer';
+    tmCta.textContent = `See on ${ev.source || 'Ticketmaster'} →`;
+
+    document.querySelectorAll('.details-card .row').forEach(row => row.remove());
+    const detailsCard = document.querySelector('.details-card');
+    const detailRows = [
+      ['Venue', `${ev.venue || ''}${ev.city ? ', ' + ev.city : ''}`],
+      ['Date & time', ev.date || ''],
+      ['Category', ev.category || '—']
+    ];
+    detailRows.forEach(([k, v]) => {
+      if (!v) return;
+      const row = document.createElement('div');
+      row.className = 'row';
+      row.innerHTML = `<span class="k">${escapeHtml(k)}</span><span class="v">${escapeHtml(v)}</span>`;
+      detailsCard.appendChild(row);
+    });
+
+    setupFavoriteButton(ev);
+  }
+
+  async function setupFavoriteButton(ev) {
+    const favToggle = document.getElementById('favToggle');
+
+    if (!token) {
+      favToggle.title = 'Log in to save favorites';
+      favToggle.addEventListener('click', () => { window.location.href = '/'; });
+      return;
+    }
+
+    let currentFavorite = null;
+    try {
+      const res = await fetch(`${API_URL}/getfavorites`, {
+        headers: { 'X-Session-Token': token }
+      });
+      const data = await res.json();
+      currentFavorite = (data.favorites || []).find(f => f.url === ev.url) || null;
+    } catch (err) {
+      console.error('Failed to load favorite status', err);
+    }
+
+    function render() {
+      favToggle.classList.toggle('is-fav', !!currentFavorite);
+      favToggle.textContent = currentFavorite ? '★' : '☆';
+      favToggle.title = currentFavorite ? 'Remove from favorites' : 'Save to favorites';
+    }
+    render();
+
+    favToggle.addEventListener('click', async () => {
+      try {
+        if (currentFavorite) {
+          await fetch(`${API_URL}/removefavorite`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Session-Token': token },
+            body: JSON.stringify({ id: currentFavorite.id })
+          });
+          currentFavorite = null;
+        } else {
+          const res = await fetch(`${API_URL}/addfavorite`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Session-Token': token },
+            body: JSON.stringify(ev)
+          });
+          const data = await res.json();
+          currentFavorite = { id: data.id, url: ev.url };
+        }
+        render();
+      } catch (err) {
+        console.error('Failed to update favorite', err);
+      }
+    });
+  }
+</script>
+
+</body>
+</html>

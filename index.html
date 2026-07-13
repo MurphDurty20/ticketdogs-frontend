@@ -1023,19 +1023,26 @@ input.addEventListener('keydown', e => { if (e.key === 'Enter') suggestDropdown.
     return data;
   }
 
+  function openEventPage(ev) {
+    try {
+      sessionStorage.setItem('compareEvent', JSON.stringify(ev));
+    } catch (err) {
+      console.error('Failed to store event for comparison page', err);
+    }
+  }
+
   function buildEventCard(ev) {
     const card = document.createElement('div');
     card.className = 'event-card';
 
     const link = document.createElement('a');
-    link.href = ev.url || '#';
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
+    link.href = '/event.html';
     link.style.textDecoration = 'none';
     link.style.color = 'inherit';
     link.style.display = 'flex';
     link.style.flexDirection = 'column';
     link.style.flex = '1';
+    link.addEventListener('click', () => openEventPage(ev));
 
     const thumbStyle = ev.image
       ? `background-image: url('${escapeHtml(ev.image)}');`
@@ -1276,10 +1283,9 @@ function buildRowCard(ev) {
   card.className = 'row-card';
 
   const link = document.createElement('a');
-  link.href = ev.url || '#';
-  link.target = '_blank';
-  link.rel = 'noopener noreferrer';
+  link.href = '/event.html';
   link.style.cssText = 'display:flex; align-items:center; gap:14px; flex:1; min-width:0; text-decoration:none; color:inherit;';
+  link.addEventListener('click', () => openEventPage(ev));
 
   const thumbStyle = ev.image ? `background-image: url('${escapeHtml(ev.image)}');` : '';
   const eventId = getFavoriteId(ev.url || '');

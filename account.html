@@ -774,6 +774,14 @@
 
   document.getElementById('favSort').addEventListener('change', renderFavorites);
 
+  function openEventPage(ev) {
+    try {
+      sessionStorage.setItem('compareEvent', JSON.stringify(ev));
+    } catch (err) {
+      console.error('Failed to store event for comparison page', err);
+    }
+  }
+
   function buildRowCard(ev) {
     const card = document.createElement('div');
     card.className = 'row-card';
@@ -781,7 +789,7 @@
     const thumbStyle = ev.image ? `background-image: url('${escapeHtml(ev.image)}');` : '';
 
     card.innerHTML = `
-      <a href="${ev.url || '#'}" target="_blank" rel="noopener noreferrer" style="display:flex; align-items:center; gap:14px; flex:1; min-width:0; text-decoration:none; color:inherit;">
+      <a href="/event.html" style="display:flex; align-items:center; gap:14px; flex:1; min-width:0; text-decoration:none; color:inherit;">
         <div class="row-thumb" style="${thumbStyle}"></div>
         <div class="row-details">
           <p class="row-name">${escapeHtml(ev.name)}</p>
@@ -790,6 +798,7 @@
         <div class="row-price">${formatPrice(ev.price, ev.source)}</div>
       </a>
     `;
+    card.querySelector('a').addEventListener('click', () => openEventPage(ev));
 
     const isFav = isEventFavorited(ev);
     const favBtn = document.createElement('button');
@@ -854,7 +863,7 @@
     const thumbStyle = fav.image ? `background-image: url('${escapeHtml(fav.image)}');` : '';
 
     card.innerHTML = `
-      <a href="${fav.url || '#'}" target="_blank" rel="noopener noreferrer" style="display:flex; align-items:center; gap:14px; flex:1; min-width:0; text-decoration:none; color:inherit;">
+      <a href="/event.html" style="display:flex; align-items:center; gap:14px; flex:1; min-width:0; text-decoration:none; color:inherit;">
         <div class="row-thumb" style="${thumbStyle}"></div>
         <div class="row-details">
           <p class="row-name">${escapeHtml(fav.name)}</p>
@@ -863,6 +872,7 @@
         <div class="row-price">${formatPrice(fav.price, fav.source)}</div>
       </a>
     `;
+    card.querySelector('a').addEventListener('click', () => openEventPage(fav));
 
     const removeBtn = document.createElement('button');
     removeBtn.className = 'row-remove';
