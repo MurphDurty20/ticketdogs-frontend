@@ -403,6 +403,13 @@
       <option value="Film">Film</option>
     </select>
   </div>
+  <div class="profile-field">
+    <label for="dateFormatSelect">Date format</label>
+    <select id="dateFormatSelect">
+      <option value="US">Month Day, Year (July 15, 2026)</option>
+      <option value="international">Day Month Year (15 July 2026)</option>
+    </select>
+  </div>
   <div class="profile-field checkbox-field">
     <input type="checkbox" id="hideTributeDefaultCheckbox">
     <label for="hideTributeDefaultCheckbox">Hide tribute/cover acts by default</label>
@@ -455,6 +462,7 @@
   let allArtistShows = [];
   let followedArtistCount = 0;
   let selectedArtistFilters = new Set();
+  let userDateFormat = 'US';
 
   const SEARCH_API_URL = `${API_URL}/searchevents`;
 
@@ -487,7 +495,11 @@
       document.getElementById('defaultCategorySelect').value = data.defaultCategory || 'All';
       document.getElementById('hideTributeDefaultCheckbox').checked = !!data.hideTributeDefault;
       document.getElementById('hideTributeCheckbox').checked = !!data.hideTributeDefault;
+      document.getElementById('dateFormatSelect').value = data.dateFormat || 'US';
+      userDateFormat = data.dateFormat || 'US';
       renderArtistShows();
+      renderFavorites();
+      renderSearchResultsList();
     } catch (err) {
       console.error('Failed to load profile', err);
     }
@@ -506,7 +518,8 @@
         body: JSON.stringify({
           name: document.getElementById('displayName').value.trim(),
           defaultCategory: document.getElementById('defaultCategorySelect').value,
-          hideTributeDefault: document.getElementById('hideTributeDefaultCheckbox').checked
+          hideTributeDefault: document.getElementById('hideTributeDefaultCheckbox').checked,
+          dateFormat: document.getElementById('dateFormatSelect').value
         })
       });
       const data = await res.json();
@@ -515,6 +528,11 @@
         statusEl.textContent = data.error || 'Something went wrong saving your preferences.';
         return;
       }
+
+      userDateFormat = data.dateFormat || 'US';
+      renderArtistShows();
+      renderFavorites();
+      renderSearchResultsList();
 
       statusEl.textContent = 'Saved.';
       setTimeout(() => { statusEl.textContent = ''; }, 2500);
@@ -777,6 +795,7 @@
   function openEventPage(ev) {
     try {
       sessionStorage.setItem('compareEvent', JSON.stringify(ev));
+      sessionStorage.setItem('compareReturnTo', window.location.pathname + window.location.search);
     } catch (err) {
       console.error('Failed to store event for comparison page', err);
     }
@@ -793,7 +812,7 @@
         <div class="row-thumb" style="${thumbStyle}"></div>
         <div class="row-details">
           <p class="row-name">${escapeHtml(ev.name)}</p>
-          <div class="row-meta">${escapeHtml(ev.date)} · ${escapeHtml(ev.venue)}${ev.city ? ', ' + escapeHtml(ev.city) : ''}</div>
+          <div class="row-meta">${escapeHtml(formatEventDate(ev.date))} · ${escapeHtml(ev.venue)}${ev.city ? ', ' + escapeHtml(ev.city) : ''}</div>
         </div>
         <div class="row-price">${formatPrice(ev.price, ev.source)}</div>
       </a>
@@ -867,7 +886,7 @@
         <div class="row-thumb" style="${thumbStyle}"></div>
         <div class="row-details">
           <p class="row-name">${escapeHtml(fav.name)}</p>
-          <div class="row-meta">${escapeHtml(fav.date)} · ${escapeHtml(fav.venue)}${fav.city ? ', ' + escapeHtml(fav.city) : ''}</div>
+          <div class="row-meta">${escapeHtml(formatEventDate(fav.date))} · ${escapeHtml(fav.venue)}${fav.city ? ', ' + escapeHtml(fav.city) : ''}</div>
         </div>
         <div class="row-price">${formatPrice(fav.price, fav.source)}</div>
       </a>
@@ -899,6 +918,18 @@
       return `<span class="price-cta">${label} →</span>`;
     }
     return escapeHtml(price);
+  }
+
+  function formatEventDate(dateStr) {
+    if (!dateStr) return '';
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
+    if (!m) return dateStr;
+    const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    const year = m[1];
+    const month = monthNames[parseInt(m[2], 10) - 1];
+    const day = parseInt(m[3], 10);
+    if (!month) return dateStr;
+    return userDateFormat === 'international' ? `${day} ${month} ${year}` : `${month} ${day}, ${year}`;
   }
 
   function escapeHtml(str) {

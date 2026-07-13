@@ -188,7 +188,7 @@
 <div id="accountNavBar"></div>
 
 <main>
-  <div class="back-row"><a href="/">← Back to search</a></div>
+  <div class="back-row"><a href="/" id="backLink">← Back to search</a></div>
 
   <div class="hero" id="heroImage">
     <button class="fav-toggle" id="favToggle" title="Save to favorites">☆</button>
@@ -276,6 +276,19 @@
   const API_URL = "https://ticketdogs-api.azurewebsites.net/api";
   const token = localStorage.getItem('sessionToken');
 
+  let userDateFormat = 'US';
+  function formatEventDate(dateStr) {
+    if (!dateStr) return '';
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
+    if (!m) return dateStr;
+    const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    const year = m[1];
+    const month = monthNames[parseInt(m[2], 10) - 1];
+    const day = parseInt(m[3], 10);
+    if (!month) return dateStr;
+    return userDateFormat === 'international' ? `${day} ${month} ${year}` : `${month} ${day}, ${year}`;
+  }
+
   function escapeHtml(str) {
     if (!str) return '';
     return String(str).replace(/[&<>"']/g, m => ({
@@ -303,6 +316,9 @@
     navBar.innerHTML = `<a href="/">Log in</a>`;
   }
 
+  const returnTo = sessionStorage.getItem('compareReturnTo') || '/';
+  const returnLabel = returnTo.startsWith('/account.html') ? '← Back to My Account' : '← Back to search';
+
   let ev = null;
   try {
     ev = JSON.parse(sessionStorage.getItem('compareEvent') || 'null');
@@ -312,12 +328,14 @@
 
   if (!ev || !ev.name) {
     document.querySelector('main').innerHTML = `
-      <div class="back-row"><a href="/">← Back to search</a></div>
+      <div class="back-row"><a href="${escapeHtml(returnTo)}">${escapeHtml(returnLabel)}</a></div>
       <p style="text-align:center; color:var(--muted); margin-top:60px;">
-        No event selected. Head back to search and pick an event to compare prices.
+        No event selected. Head back and pick an event to compare prices.
       </p>
     `;
   } else {
+    document.getElementById('backLink').href = returnTo;
+    document.getElementById('backLink').textContent = returnLabel;
     document.title = `${ev.name} - TicketDogs`;
 
     if (ev.image) {
@@ -327,7 +345,7 @@
     document.querySelector('.hero-eyebrow').textContent = ev.category ? `🎤 ${ev.category}` : '🎟️ Event';
     document.querySelector('.hero-title').textContent = ev.name;
     document.querySelector('.hero-meta').textContent =
-      `${ev.date || ''}${ev.venue ? ' · ' + ev.venue : ''}${ev.city ? ', ' + ev.city : ''}`;
+      `${formatEventDate(ev.date)}${ev.venue ? ' · ' + ev.venue : ''}${ev.city ? ', ' + ev.city : ''}`;
 
     // Ticketmaster is the only live source right now, so it's always
     // "best price" by default — this becomes a real Math.min comparison
@@ -361,7 +379,7 @@
     const detailsCard = document.querySelector('.details-card');
     const detailRows = [
       ['Venue', `${ev.venue || ''}${ev.city ? ', ' + ev.city : ''}`],
-      ['Date & time', ev.date || ''],
+      ['Date & time', formatEventDate(ev.date)],
       ['Category', ev.category || '—']
     ];
     detailRows.forEach(([k, v]) => {
@@ -373,6 +391,26 @@
     });
 
     setupFavoriteButton(ev);
+    applyDateFormatPreference(ev);
+  }
+
+  async function applyDateFormatPreference(ev) {
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_URL}/getprofile`, {
+        headers: { 'X-Session-Token': token }
+      });
+      const data = await res.json();
+      if (!res.ok || !data.dateFormat || data.dateFormat === userDateFormat) return;
+
+      userDateFormat = data.dateFormat;
+      document.querySelector('.hero-meta').textContent =
+        `${formatEventDate(ev.date)}${ev.venue ? ' · ' + ev.venue : ''}${ev.city ? ', ' + ev.city : ''}`;
+      const dateRow = [...document.querySelectorAll('.details-card .row')].find(r => r.querySelector('.k').textContent === 'Date & time');
+      if (dateRow) dateRow.querySelector('.v').textContent = formatEventDate(ev.date);
+    } catch (err) {
+      console.error('Failed to load date format preference', err);
+    }
   }
 
   async function setupFavoriteButton(ev) {

@@ -646,6 +646,7 @@
   const CATEGORIES = ["All", "Music", "Sports", "Arts & Theatre", "Family", "Film"];
   let currentCategory = "All";
   let userDefaultCategory = "All";
+  let userDateFormat = "US";
 
   function renderCategoryChips() {
     categoryRow.innerHTML = '';
@@ -1026,6 +1027,7 @@ input.addEventListener('keydown', e => { if (e.key === 'Enter') suggestDropdown.
   function openEventPage(ev) {
     try {
       sessionStorage.setItem('compareEvent', JSON.stringify(ev));
+      sessionStorage.setItem('compareReturnTo', window.location.pathname + window.location.search);
     } catch (err) {
       console.error('Failed to store event for comparison page', err);
     }
@@ -1058,7 +1060,7 @@ input.addEventListener('keydown', e => { if (e.key === 'Enter') suggestDropdown.
       <div class="event-content">
         <p class="event-name">${escapeHtml(ev.name)}</p>
         <div class="event-meta">
-          ${escapeHtml(ev.date)}<br>${escapeHtml(ev.venue)}${ev.city ? ', ' + escapeHtml(ev.city) : ''}
+          ${escapeHtml(formatEventDate(ev.date))}<br>${escapeHtml(ev.venue)}${ev.city ? ', ' + escapeHtml(ev.city) : ''}
         </div>
       </div>
       <div class="event-price">${formatPrice(ev.price, ev.source)}</div>
@@ -1086,6 +1088,18 @@ input.addEventListener('keydown', e => { if (e.key === 'Enter') suggestDropdown.
       return `<span class="price-cta">${label} →</span>`;
     }
     return escapeHtml(price);
+  }
+
+  function formatEventDate(dateStr) {
+    if (!dateStr) return '';
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
+    if (!m) return dateStr;
+    const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    const year = m[1];
+    const month = monthNames[parseInt(m[2], 10) - 1];
+    const day = parseInt(m[3], 10);
+    if (!month) return dateStr;
+    return userDateFormat === 'international' ? `${day} ${month} ${year}` : `${month} ${day}, ${year}`;
   }
 
   function escapeHtml(str) {
@@ -1295,7 +1309,7 @@ function buildRowCard(ev) {
     <div class="row-thumb" style="${thumbStyle}"></div>
     <div class="row-details">
       <p class="row-name">${escapeHtml(ev.name)}</p>
-      <div class="row-meta">${escapeHtml(ev.date)} · ${escapeHtml(ev.venue)}${ev.city ? ', ' + escapeHtml(ev.city) : ''}</div>
+      <div class="row-meta">${escapeHtml(formatEventDate(ev.date))} · ${escapeHtml(ev.venue)}${ev.city ? ', ' + escapeHtml(ev.city) : ''}</div>
     </div>
     <div class="row-price">${formatPrice(ev.price, ev.source)}</div>
   `;
@@ -1574,6 +1588,10 @@ async function loadUserProfile() {
     }
     if (res.ok && data.hideTributeDefault) {
       hideTributeCheckbox.checked = true;
+    }
+    if (res.ok && data.dateFormat) {
+      userDateFormat = data.dateFormat;
+      renderResultsList();
     }
   } catch (err) {
     console.error('Failed to load profile', err);
